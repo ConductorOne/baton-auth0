@@ -3,7 +3,7 @@ module github.com/conductorone/baton-auth0
 go 1.22.5
 
 require (
-	github.com/conductorone/baton-sdk v0.2.18
+	github.com/conductorone/baton-sdk v0.2.20
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
 	github.com/spf13/viper v1.19.0
 	go.uber.org/zap v1.27.0
