@@ -1,0 +1,320 @@
+package client
+
+import (
+	"context"
+	"fmt"
+	"net/url"
+
+	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
+	"github.com/conductorone/baton-sdk/pkg/uhttp"
+	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
+)
+
+type Client struct {
+	wrapper     *uhttp.BaseHttpClient
+	BearerToken string
+	BaseUrl     *url.URL
+}
+
+func New(
+	ctx context.Context,
+	baseUrl string,
+	clientId string,
+	clientSecret string,
+) (*Client, error) {
+	httpClient, err := uhttp.NewClient(
+		ctx,
+		uhttp.WithLogger(
+			true,
+			ctxzap.Extract(ctx),
+		),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	wrapper, err := uhttp.NewBaseHttpClientWithContext(ctx, httpClient)
+	if err != nil {
+		return nil, err
+	}
+
+	baseUrl0, err := url.Parse(baseUrl)
+	if err != nil {
+		return nil, err
+	}
+
+	client := Client{
+		wrapper: wrapper,
+		BaseUrl: baseUrl0,
+	}
+
+	err = client.Authorize(ctx, clientId, clientSecret)
+	if err != nil {
+		return nil, err
+	}
+
+	return &client, nil
+}
+
+func (c *Client) Authorize(
+	ctx context.Context,
+	clientId string,
+	clientSecret string,
+) error {
+	var target AuthResponse
+	_, _, err := c.post(
+		ctx,
+		apiPathAuth,
+		map[string]interface{}{
+			"audience":      c.BaseUrl.JoinPath(apiPathBase),
+			"client_id":     clientId,
+			"client_secret": clientSecret,
+			"grant_type":    "client_credentials",
+		},
+		target,
+	)
+	if err != nil {
+		return err
+	}
+	c.BearerToken = target.AccessToken
+	return nil
+}
+
+func (c *Client) List(
+	ctx context.Context,
+	path string,
+	target interface{},
+	limit int,
+	offset int,
+) (
+	*v2.RateLimitDescription,
+	error,
+) {
+	_, rateLimitData, err := c.get(
+		ctx,
+		path,
+		map[string]interface{}{
+			// Note: `include_totals` changes the shape of the response
+			"include_totals": true,
+			"page":           offset,
+			"per_page":       limit,
+		},
+		&target,
+	)
+	if err != nil {
+		return rateLimitData, err
+	}
+
+	return rateLimitData, nil
+}
+
+func (c *Client) GetUsers(
+	ctx context.Context,
+	limit int,
+	offset int,
+) (
+	[]User,
+	int,
+	*v2.RateLimitDescription,
+	error,
+) {
+	var target UsersResponse
+	rateLimitData, err := c.List(
+		ctx,
+		apiPathGetUsers,
+		target,
+		limit,
+		offset,
+	)
+	if err != nil {
+		return nil, 0, rateLimitData, err
+	}
+
+	return target.Users, target.Total, rateLimitData, nil
+}
+
+func (c *Client) GetRoles(
+	ctx context.Context,
+	limit int,
+	offset int,
+) (
+	[]Role,
+	int,
+	*v2.RateLimitDescription,
+	error,
+) {
+	var target RolesResponse
+	rateLimitData, err := c.List(
+		ctx,
+		apiPathGetRoles,
+		target,
+		limit,
+		offset,
+	)
+	if err != nil {
+		return nil, 0, rateLimitData, err
+	}
+
+	return target.Roles, target.Total, rateLimitData, nil
+}
+
+func (c *Client) GetOrganizations(
+	ctx context.Context,
+	limit int,
+	offset int,
+) (
+	[]Organization,
+	int,
+	*v2.RateLimitDescription,
+	error,
+) {
+	var target OrganizationsResponse
+	rateLimitData, err := c.List(
+		ctx,
+		apiPathGetOrganizations,
+		target,
+		limit,
+		offset,
+	)
+	if err != nil {
+		return nil, 0, rateLimitData, err
+	}
+
+	return target.Organizations, target.Total, rateLimitData, nil
+}
+
+func (c *Client) GetOrganizationMembers(
+	ctx context.Context,
+	organizationId string,
+	limit int,
+	offset int,
+) (
+	[]User,
+	int,
+	*v2.RateLimitDescription,
+	error,
+) {
+	var target OrganizationMembersResponse
+	rateLimitData, err := c.List(
+		ctx,
+		fmt.Sprintf(apiPathOrganizationMembers, organizationId),
+		target,
+		limit,
+		offset,
+	)
+	if err != nil {
+		return nil, 0, rateLimitData, err
+	}
+
+	return target.Members, target.Total, rateLimitData, nil
+}
+
+func (c *Client) GetRoleUsers(
+	ctx context.Context,
+	roleId string,
+	limit int,
+	offset int,
+) (
+	[]User,
+	int,
+	*v2.RateLimitDescription,
+	error,
+) {
+	var target RolesUsersResponse
+	rateLimitData, err := c.List(
+		ctx,
+		fmt.Sprintf(apiPathUsersForRole, roleId),
+		target,
+		limit,
+		offset,
+	)
+	if err != nil {
+		return nil, 0, rateLimitData, err
+	}
+
+	return target.Users, target.Total, rateLimitData, nil
+}
+
+func (c *Client) AddUserToRole(
+	ctx context.Context,
+	roleId string,
+	userId string,
+) (
+	*v2.RateLimitDescription,
+	error,
+) {
+	var target RolesUsersResponse
+	_, rateLimitData, err := c.post(
+		ctx,
+		fmt.Sprintf(apiPathRolesForUser, userId),
+		map[string]interface{}{
+			"roles": []string{roleId},
+		},
+		target,
+	)
+	// TODO MARCOS check for double grant.
+	return rateLimitData, err
+}
+
+func (c *Client) RemoveUserFromRole(
+	ctx context.Context,
+	roleId string,
+	userId string,
+) (
+	*v2.RateLimitDescription,
+	error,
+) {
+	var target RolesUsersResponse
+	_, rateLimitData, err := c.delete(
+		ctx,
+		fmt.Sprintf(apiPathRolesForUser, userId),
+		map[string]interface{}{
+			"roles": []string{roleId},
+		},
+		target,
+	)
+	// TODO MARCOS check for double revoke.
+	return rateLimitData, err
+}
+
+func (c *Client) AddUserToOrganization(
+	ctx context.Context,
+	organizationId string,
+	userId string,
+) (
+	*v2.RateLimitDescription,
+	error,
+) {
+	var target RolesUsersResponse
+	_, rateLimitData, err := c.post(
+		ctx,
+		fmt.Sprintf(apiPathOrganizationMembers, organizationId),
+		map[string]interface{}{
+			"users": []string{userId},
+		},
+		target,
+	)
+	// TODO MARCOS check for double grant.
+	return rateLimitData, err
+}
+
+func (c *Client) RemoveUserFromOrganization(
+	ctx context.Context,
+	organizationId string,
+	userId string,
+) (
+	*v2.RateLimitDescription,
+	error,
+) {
+	var target RolesUsersResponse
+	_, rateLimitData, err := c.delete(
+		ctx,
+		fmt.Sprintf(apiPathOrganizationMembers, organizationId),
+		map[string]interface{}{
+			"users": []string{userId},
+		},
+		target,
+	)
+	// TODO MARCOS check for double revoke.
+	return rateLimitData, err
+}
