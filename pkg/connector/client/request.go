@@ -95,7 +95,6 @@ func (c *Client) doRequest(
 	}
 
 	url := c.getUrl(path, queryParameters)
-	println("url", url.String())
 
 	request, err := c.wrapper.NewRequest(ctx, method, url, options...)
 	if err != nil {

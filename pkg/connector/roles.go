@@ -156,7 +156,7 @@ func (o *roleBuilder) Grants(
 
 	nextToken := client.GetNextToken(offset, limit, total)
 
-	return nil, nextToken, outputAnnotations, nil
+	return grants, nextToken, outputAnnotations, nil
 }
 
 func (r *roleBuilder) Grant(

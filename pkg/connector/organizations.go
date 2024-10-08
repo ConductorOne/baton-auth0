@@ -156,7 +156,7 @@ func (o *organizationBuilder) Grants(
 
 	nextToken := client.GetNextToken(offset, limit, total)
 
-	return nil, nextToken, outputAnnotations, nil
+	return grants, nextToken, outputAnnotations, nil
 }
 
 func (o *organizationBuilder) Grant(

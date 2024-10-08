@@ -62,7 +62,7 @@ func (c *Client) Authorize(
 	clientSecret string,
 ) error {
 	var target AuthResponse
-	_, _, err := c.post(
+	response, _, err := c.post(
 		ctx,
 		apiPathAuth,
 		map[string]interface{}{
@@ -76,6 +76,7 @@ func (c *Client) Authorize(
 	if err != nil {
 		return err
 	}
+	defer response.Body.Close()
 	c.BearerToken = target.AccessToken
 	return nil
 }
@@ -90,7 +91,7 @@ func (c *Client) List(
 	*v2.RateLimitDescription,
 	error,
 ) {
-	_, rateLimitData, err := c.get(
+	response, rateLimitData, err := c.get(
 		ctx,
 		path,
 		map[string]interface{}{
@@ -104,6 +105,7 @@ func (c *Client) List(
 	if err != nil {
 		return rateLimitData, err
 	}
+	defer response.Body.Close()
 
 	return rateLimitData, nil
 }
@@ -244,7 +246,7 @@ func (c *Client) AddUserToRole(
 	error,
 ) {
 	var target RolesUsersResponse
-	_, rateLimitData, err := c.post(
+	response, rateLimitData, err := c.post(
 		ctx,
 		fmt.Sprintf(apiPathRolesForUser, userId),
 		map[string]interface{}{
@@ -252,8 +254,12 @@ func (c *Client) AddUserToRole(
 		},
 		target,
 	)
+	if err != nil {
+		return rateLimitData, err
+	}
+	defer response.Body.Close()
 	// TODO MARCOS check for double grant.
-	return rateLimitData, err
+	return rateLimitData, nil
 }
 
 func (c *Client) RemoveUserFromRole(
@@ -265,7 +271,7 @@ func (c *Client) RemoveUserFromRole(
 	error,
 ) {
 	var target RolesUsersResponse
-	_, rateLimitData, err := c.delete(
+	response, rateLimitData, err := c.delete(
 		ctx,
 		fmt.Sprintf(apiPathRolesForUser, userId),
 		map[string]interface{}{
@@ -273,8 +279,13 @@ func (c *Client) RemoveUserFromRole(
 		},
 		target,
 	)
+	if err != nil {
+		return rateLimitData, err
+	}
+
+	defer response.Body.Close()
 	// TODO MARCOS check for double revoke.
-	return rateLimitData, err
+	return rateLimitData, nil
 }
 
 func (c *Client) AddUserToOrganization(
@@ -286,7 +297,7 @@ func (c *Client) AddUserToOrganization(
 	error,
 ) {
 	var target RolesUsersResponse
-	_, rateLimitData, err := c.post(
+	response, rateLimitData, err := c.post(
 		ctx,
 		fmt.Sprintf(apiPathOrganizationMembers, organizationId),
 		map[string]interface{}{
@@ -294,8 +305,13 @@ func (c *Client) AddUserToOrganization(
 		},
 		target,
 	)
+	if err != nil {
+		return rateLimitData, err
+	}
+
+	defer response.Body.Close()
 	// TODO MARCOS check for double grant.
-	return rateLimitData, err
+	return rateLimitData, nil
 }
 
 func (c *Client) RemoveUserFromOrganization(
@@ -307,7 +323,7 @@ func (c *Client) RemoveUserFromOrganization(
 	error,
 ) {
 	var target RolesUsersResponse
-	_, rateLimitData, err := c.delete(
+	response, rateLimitData, err := c.delete(
 		ctx,
 		fmt.Sprintf(apiPathOrganizationMembers, organizationId),
 		map[string]interface{}{
@@ -315,6 +331,11 @@ func (c *Client) RemoveUserFromOrganization(
 		},
 		target,
 	)
+	if err != nil {
+		return rateLimitData, err
+	}
+
+	defer response.Body.Close()
 	// TODO MARCOS check for double revoke.
-	return rateLimitData, err
+	return rateLimitData, nil
 }
