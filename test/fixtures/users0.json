@@ -1,0 +1,26 @@
+{
+  "start": 0,
+  "limit": 50,
+  "length": 1,
+  "users": [
+    {
+      "user_id": "auth0|670564e2d4c224cf65edb3fd",
+      "email": "marcos.gaeta@conductorone.com",
+      "name": "marcos.gaeta@conductorone.com",
+      "nickname": "marcos.gaeta",
+      "updated_at": "2024-10-08T16:59:14.230Z",
+      "identities": [
+        {
+          "connection": "Username-Password-Authentication",
+          "user_id": "670564e2d4c224cf65edb3fd",
+          "provider": "auth0",
+          "isSocial": false
+        }
+      ],
+      "picture": "https://s.gravatar.com/avatar/0a0c23cb984d51e2cb0d9f33ebf0a793?s=480&r=pg&d=https%3A%2F%2Fcdn.auth0.com%2Favatars%2Fma.png",
+      "email_verified": false,
+      "created_at": "2024-10-08T16:59:14.230Z"
+    }
+  ],
+  "total": 2
+}
