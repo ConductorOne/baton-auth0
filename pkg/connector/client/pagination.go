@@ -6,7 +6,7 @@ import (
 	"github.com/conductorone/baton-sdk/pkg/pagination"
 )
 
-const PageSizeDefault = 1000
+const PageSizeDefault = 100
 
 type Pagination struct {
 	PagingRequestId string `json:"pagingRequestId"`

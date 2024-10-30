@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
@@ -108,6 +109,8 @@ func (c *Client) doRequest(
 		uhttp.WithJSONResponse(target),
 	)
 	if err != nil {
+		body, _ := io.ReadAll(response.Body)
+		fmt.Println(string(body))
 		return nil, &ratelimitData, err
 	}
 	defer response.Body.Close()

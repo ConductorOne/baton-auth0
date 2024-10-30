@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"net/url"
 
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
@@ -62,20 +63,30 @@ func (c *Client) Authorize(
 	clientSecret string,
 ) error {
 	var target AuthResponse
-	response, _, err := c.post(
-		ctx,
-		apiPathAuth,
-		map[string]interface{}{
-			"audience":      c.BaseUrl.JoinPath(apiPathBase),
-			"client_id":     clientId,
-			"client_secret": clientSecret,
-			"grant_type":    "client_credentials",
-		},
-		target,
-	)
+	form := &url.Values{}
+	form.Set("audience", c.BaseUrl.JoinPath(apiPathBase).String())
+	form.Set("client_id", clientId)
+	form.Set("client_secret", clientSecret)
+	form.Set("grant_type", "client_credentials")
+
+	options := []uhttp.RequestOption{
+		uhttp.WithFormBody(form.Encode()),
+	}
+
+	url := c.BaseUrl.JoinPath(apiPathAuth)
+	request, err := c.wrapper.NewRequest(ctx, http.MethodPost, url, options...)
 	if err != nil {
 		return err
 	}
+
+	response, err := c.wrapper.Do(
+		request,
+		uhttp.WithJSONResponse(&target),
+	)
+	if err != nil {
+		return fmt.Errorf("error authorizing: %w", err)
+	}
+
 	defer response.Body.Close()
 	c.BearerToken = target.AccessToken
 	return nil
@@ -103,7 +114,7 @@ func (c *Client) List(
 		&target,
 	)
 	if err != nil {
-		return rateLimitData, err
+		return rateLimitData, fmt.Errorf("error getting users: %w", err)
 	}
 	defer response.Body.Close()
 
