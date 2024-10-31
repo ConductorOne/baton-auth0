@@ -102,7 +102,7 @@ func (c *Client) List(
 	*v2.RateLimitDescription,
 	error,
 ) {
-	response, rateLimitData, err := c.get(
+	_, rateLimitData, err := c.get(
 		ctx,
 		path,
 		map[string]interface{}{
@@ -114,9 +114,8 @@ func (c *Client) List(
 		&target,
 	)
 	if err != nil {
-		return rateLimitData, fmt.Errorf("error getting users: %w", err)
+		return rateLimitData, fmt.Errorf("error listing resource: %w", err)
 	}
-	defer response.Body.Close()
 
 	return rateLimitData, nil
 }
@@ -135,7 +134,7 @@ func (c *Client) GetUsers(
 	rateLimitData, err := c.List(
 		ctx,
 		apiPathGetUsers,
-		target,
+		&target,
 		limit,
 		offset,
 	)
@@ -160,7 +159,7 @@ func (c *Client) GetRoles(
 	rateLimitData, err := c.List(
 		ctx,
 		apiPathGetRoles,
-		target,
+		&target,
 		limit,
 		offset,
 	)
@@ -185,7 +184,7 @@ func (c *Client) GetOrganizations(
 	rateLimitData, err := c.List(
 		ctx,
 		apiPathGetOrganizations,
-		target,
+		&target,
 		limit,
 		offset,
 	)
@@ -211,7 +210,7 @@ func (c *Client) GetOrganizationMembers(
 	rateLimitData, err := c.List(
 		ctx,
 		fmt.Sprintf(apiPathOrganizationMembers, organizationId),
-		target,
+		&target,
 		limit,
 		offset,
 	)
@@ -237,7 +236,7 @@ func (c *Client) GetRoleUsers(
 	rateLimitData, err := c.List(
 		ctx,
 		fmt.Sprintf(apiPathUsersForRole, roleId),
-		target,
+		&target,
 		limit,
 		offset,
 	)
