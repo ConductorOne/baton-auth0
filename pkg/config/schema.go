@@ -6,17 +6,17 @@ import (
 
 var (
 	BaseUrlField = field.StringField(
-		"base-url",
+		"auth0-base-url",
 		field.WithDescription("Base URL of the API"),
 		field.WithRequired(true),
 	)
 	ClientIdField = field.StringField(
-		"oauth0-client-id",
+		"auth0-client-id",
 		field.WithDescription("App client ID"),
 		field.WithRequired(true),
 	)
 	ClientSecretField = field.StringField(
-		"oauth0-client-secret",
+		"auth0-client-secret",
 		field.WithDescription("App client secret"),
 		field.WithRequired(true),
 	)
