@@ -118,7 +118,7 @@ func (c *Client) List(
 		return rateLimitData, fmt.Errorf("error listing resource: %w", err)
 	}
 
-	response.Body.Close()
+	defer response.Body.Close()
 
 	return rateLimitData, nil
 }
