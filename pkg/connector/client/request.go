@@ -55,6 +55,24 @@ func (c *Client) post(
 	)
 }
 
+func (c *Client) postNoJSONResponse(
+	ctx context.Context,
+	path string,
+	body interface{},
+) (
+	*http.Response,
+	*v2.RateLimitDescription,
+	error,
+) {
+	return c.doRequestNoJSONResponse(
+		ctx,
+		http.MethodPost,
+		path,
+		nil,
+		body,
+	)
+}
+
 func (c *Client) delete(
 	ctx context.Context,
 	path string,

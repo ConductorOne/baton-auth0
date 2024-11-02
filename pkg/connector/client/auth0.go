@@ -309,14 +309,12 @@ func (c *Client) AddUserToOrganization(
 	*v2.RateLimitDescription,
 	error,
 ) {
-	var target RolesUsersResponse
-	response, rateLimitData, err := c.post(
+	response, rateLimitData, err := c.postNoJSONResponse(
 		ctx,
 		fmt.Sprintf(apiPathOrganizationMembers, organizationId),
 		map[string]interface{}{
-			"users": []string{userId},
+			"members": []string{userId},
 		},
-		&target,
 	)
 	if err != nil {
 		return rateLimitData, err
