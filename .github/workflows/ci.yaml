@@ -70,13 +70,13 @@ jobs:
 
       - name: Check for grant before revoking
         run:
-          baton grants --entitlement="${{ env.CONNECTOR_ENTITLEMENT }}" --output-format=json | jq --exit-status ".grants[].principal.id.resource == \"${{ env.CONNECTOR_PRINCIPAL }}\""
+          baton grants --entitlement="${{ env.CONNECTOR_ENTITLEMENT }}" --output-format=json | jq --exit-status ".grants[].principal.displayName == \"${{ env.CONNECTOR_PRINCIPAL }}\""
 
       - name: Revoke grants
         run: ./baton-auth0 --revoke-grant="${{ env.CONNECTOR_GRANT }}"
 
       - name: Check grant was revoked
-        run: ./baton-auth0 && baton grants --entitlement="${{ env.CONNECTOR_ENTITLEMENT }}" --output-format=json | jq --exit-status "if .grants then .grants[]?.principal.id.resource != \"${{ env.CONNECTOR_PRINCIPAL }}\" else . end"
+        run: ./baton-auth0 && baton grants --entitlement="${{ env.CONNECTOR_ENTITLEMENT }}" --output-format=json | jq --exit-status "if .grants then .grants[]?.principal.displayName != \"${{ env.CONNECTOR_PRINCIPAL }}\" else . end"
 
       - name: Grant entitlement
         # Change the grant arguments to the correct IDs for your test data
@@ -85,5 +85,5 @@ jobs:
       - name: Check grant was re-granted
 
         run:
-          baton grants --entitlement="${{ env.CONNECTOR_ENTITLEMENT }}" --output-format=json | jq --exit-status ".grants[].principal.id.resource == \"${{ env.CONNECTOR_PRINCIPAL }}\""
+          baton grants --entitlement="${{ env.CONNECTOR_ENTITLEMENT }}" --output-format=json | jq --exit-status ".grants[].principal.displayName == \"${{ env.CONNECTOR_PRINCIPAL }}\""
 
