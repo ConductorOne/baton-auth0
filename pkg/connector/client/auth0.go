@@ -102,7 +102,7 @@ func (c *Client) List(
 	*v2.RateLimitDescription,
 	error,
 ) {
-	_, rateLimitData, err := c.get(
+	response, rateLimitData, err := c.get(
 		ctx,
 		path,
 		map[string]interface{}{
@@ -113,9 +113,12 @@ func (c *Client) List(
 		},
 		&target,
 	)
+
 	if err != nil {
 		return rateLimitData, fmt.Errorf("error listing resource: %w", err)
 	}
+
+	response.Body.Close()
 
 	return rateLimitData, nil
 }

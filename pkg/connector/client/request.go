@@ -110,8 +110,7 @@ func (c *Client) doRequest(
 	)
 	if err != nil {
 		body, _ := io.ReadAll(response.Body)
-		fmt.Println(string(body))
-		return nil, &ratelimitData, err
+		return nil, &ratelimitData, fmt.Errorf("error doing request: %w, body %v", err, string(body))
 	}
 	defer response.Body.Close()
 
