@@ -265,7 +265,7 @@ func (c *Client) AddUserToRole(
 		map[string]interface{}{
 			"roles": []string{roleId},
 		},
-		target,
+		&target,
 	)
 	if err != nil {
 		return rateLimitData, err
@@ -290,7 +290,7 @@ func (c *Client) RemoveUserFromRole(
 		map[string]interface{}{
 			"roles": []string{roleId},
 		},
-		target,
+		&target,
 	)
 	if err != nil {
 		return rateLimitData, err
@@ -316,7 +316,7 @@ func (c *Client) AddUserToOrganization(
 		map[string]interface{}{
 			"users": []string{userId},
 		},
-		target,
+		&target,
 	)
 	if err != nil {
 		return rateLimitData, err
@@ -335,17 +335,15 @@ func (c *Client) RemoveUserFromOrganization(
 	*v2.RateLimitDescription,
 	error,
 ) {
-	var target RolesUsersResponse
-	response, rateLimitData, err := c.delete(
+	response, rateLimitData, err := c.deleteNoJSONResponse(
 		ctx,
 		fmt.Sprintf(apiPathOrganizationMembers, organizationId),
 		map[string]interface{}{
-			"users": []string{userId},
+			"members": []string{userId},
 		},
-		target,
 	)
 	if err != nil {
-		return rateLimitData, err
+		return rateLimitData, fmt.Errorf("error removing user from organization: %w", err)
 	}
 
 	defer response.Body.Close()

@@ -68,6 +68,10 @@ jobs:
       - name: Get baton resources
         run: baton resources
 
+      - name: Grant entitlement (in case previous ci run failed)
+        # Change the grant arguments to the correct IDs for your test data
+        run: ./baton-auth0 --grant-entitlement="${{ env.CONNECTOR_ENTITLEMENT }}" --grant-principal="${{ env.CONNECTOR_PRINCIPAL }}" --grant-principal-type="${{ env.CONNECTOR_PRINCIPAL_TYPE }}"
+
       - name: Check for grant before revoking
         run:
           baton grants --entitlement="${{ env.CONNECTOR_ENTITLEMENT }}" --output-format=json | jq --exit-status ".grants[].principal.displayName == \"${{ env.CONNECTOR_PRINCIPAL }}\""
