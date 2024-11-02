@@ -321,7 +321,7 @@ func (c *Client) AddUserToOrganization(
 	}
 
 	defer response.Body.Close()
-	// TODO MARCOS check for double grant.
+	// TODO: MARCOS check for double grant.
 	return rateLimitData, nil
 }
 
