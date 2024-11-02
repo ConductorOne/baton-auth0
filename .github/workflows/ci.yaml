@@ -46,7 +46,7 @@ jobs:
       BATON_AUTH0_CLIENT_SECRET: ${{ secrets.BATON_AUTH0_CLIENT_SECRET }}
 
       CONNECTOR_GRANT: 'organization:org_TcURzPaMeezOd7N4:member:user:auth0|6722c078392d928041854a20'
-      CONNECTOR_ENTITLEMENT: 'entitlement:org_TcURzPaMeezOd7N4:member'
+      CONNECTOR_ENTITLEMENT: 'organization:org_TcURzPaMeezOd7N4:member'
       CONNECTOR_PRINCIPAL: 'alejandro.bernal'
       CONNECTOR_PRINCIPAL_TYPE: 'user'
     steps:
