@@ -48,6 +48,23 @@ everyone. If you have questions, problems, or ideas: Please open a GitHub Issue!
 
 See [CONTRIBUTING.md](https://github.com/ConductorOne/baton/blob/main/CONTRIBUTING.md) for more details.
 
+# Getting the authentication parameters
+
+The authentication parameters can be found in the Auth0 dashboard under the "Applications" section.
+
+If you don't already have an application, you can create one by clicking the "Create Application" button. Select "Machine to Machine Applications" and give it a name.
+
+Once you have an application, you can find the "Client ID" and "Client Secret" under the "Settings" section. The application should connect to the management API of the domain.
+
+The permissions needed are:
+- Read Users
+- Read Grants
+- Read Organizations
+- Read Organization Members
+- Read Roles
+- Read Role Members
+
+
 # `baton-auth0` Command Line Usage
 
 ```
@@ -69,7 +86,7 @@ Flags:
   -h, --help                         help for baton-auth0
       --log-format string            The output format for logs: json, console ($BATON_LOG_FORMAT) (default "json")
       --log-level string             The log level: debug, info, warn, error ($BATON_LOG_LEVEL) (default "info")
-  -p, --provisioning                 This must be set in order for provisioning actions to be enabled ($BATON_PROVISIONING)
+  -p, --provisioning                 If this connector supports provisioning, this must be set in order for provisioning actions to be enabled ($BATON_PROVISIONING)
       --ticketing                    This must be set to enable ticketing support ($BATON_TICKETING)
   -v, --version                      version for baton-auth0
 
