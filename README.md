@@ -86,7 +86,7 @@ Flags:
   -h, --help                         help for baton-auth0
       --log-format string            The output format for logs: json, console ($BATON_LOG_FORMAT) (default "json")
       --log-level string             The log level: debug, info, warn, error ($BATON_LOG_LEVEL) (default "info")
-  -p, --provisioning                 This must be set in order for provisioning actions to be enabled ($BATON_PROVISIONING)
+  -p, --provisioning                 If this connector supports provisioning, this must be set in order for provisioning actions to be enabled ($BATON_PROVISIONING)
       --ticketing                    This must be set to enable ticketing support ($BATON_TICKETING)
   -v, --version                      version for baton-auth0
 
