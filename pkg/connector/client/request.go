@@ -31,7 +31,7 @@ func (c *Client) get(
 		path,
 		queryParameters,
 		nil,
-		&target,
+		target,
 	)
 }
 
@@ -51,7 +51,7 @@ func (c *Client) post(
 		path,
 		nil,
 		body,
-		&target,
+		target,
 	)
 }
 
@@ -89,7 +89,7 @@ func (c *Client) delete(
 		path,
 		nil,
 		body,
-		&target,
+		target,
 	)
 }
 
