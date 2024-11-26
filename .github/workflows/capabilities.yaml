@@ -24,6 +24,10 @@ jobs:
         run: go build -o connector ./cmd/baton-auth0
 
       - name: Run and save output
+        env:
+          BATON_AUTH0_BASE_URL: "https://dev-n8a8p1kmt7k0ebdz.us.auth0.com"
+          BATON_AUTH0_CLIENT_ID: EiajnMCHSnpjNdhAtQZ3SkG2cxE7JGII
+          BATON_AUTH0_CLIENT_SECRET: ${{ secrets.BATON_AUTH0_CLIENT_SECRET }}
         run: ./connector capabilities > baton_capabilities.json
 
       - name: Commit changes

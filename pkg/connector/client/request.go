@@ -146,7 +146,10 @@ func (c *Client) doRequest(
 	)
 
 	if err != nil {
-		return nil, &ratelimitData, fmt.Errorf("error doing request: %w, body: %v", err, logBody(response.Body))
+		if response != nil {
+			return nil, &ratelimitData, fmt.Errorf("error doing request: %w, body: %v", err, logBody(response.Body))
+		}
+		return nil, &ratelimitData, fmt.Errorf("error doing request: %w", err)
 	}
 
 	return response, &ratelimitData, nil
