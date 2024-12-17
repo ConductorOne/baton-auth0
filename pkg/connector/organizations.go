@@ -64,15 +64,19 @@ func (o *organizationBuilder) List(
 	outputResources := make([]*v2.Resource, 0)
 	var outputAnnotations annotations.Annotations
 
-	offset, limit, _, err := client.ParsePaginationToken(pToken)
+	page, limit, _, err := client.ParsePaginationToken(pToken)
 	if err != nil {
 		return nil, "", nil, err
 	}
 
-	organizations, total, ratelimitData, err := o.client.GetOrganizations(ctx, limit, offset)
+	organizations, total, ratelimitData, err := o.client.GetOrganizations(ctx, limit, page)
 	outputAnnotations.WithRateLimiting(ratelimitData)
 	if err != nil {
 		return nil, "", outputAnnotations, err
+	}
+
+	if len(organizations) == 0 {
+		return outputResources, "", outputAnnotations, nil
 	}
 
 	for _, organization := range organizations {
@@ -83,7 +87,7 @@ func (o *organizationBuilder) List(
 		outputResources = append(outputResources, organizationResource0)
 	}
 
-	nextToken := client.GetNextToken(offset, limit, total)
+	nextToken := client.GetNextToken(page, limit, total)
 
 	return outputResources, nextToken, outputAnnotations, nil
 }
@@ -124,7 +128,7 @@ func (o *organizationBuilder) Grants(
 	error,
 ) {
 	var outputAnnotations annotations.Annotations
-	offset, limit, _, err := client.ParsePaginationToken(token)
+	page, limit, _, err := client.ParsePaginationToken(token)
 	if err != nil {
 		return nil, "", nil, err
 	}
@@ -133,11 +137,15 @@ func (o *organizationBuilder) Grants(
 		ctx,
 		resource.Id.Resource,
 		limit,
-		offset,
+		page,
 	)
 	outputAnnotations.WithRateLimiting(ratelimitData)
 	if err != nil {
 		return nil, "", outputAnnotations, err
+	}
+
+	if len(members) == 0 {
+		return nil, "", outputAnnotations, nil
 	}
 
 	var grants []*v2.Grant
@@ -154,7 +162,7 @@ func (o *organizationBuilder) Grants(
 		grants = append(grants, nextGrant)
 	}
 
-	nextToken := client.GetNextToken(offset, limit, total)
+	nextToken := client.GetNextToken(page, limit, total)
 
 	return grants, nextToken, outputAnnotations, nil
 }

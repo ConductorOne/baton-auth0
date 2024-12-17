@@ -10,10 +10,10 @@ const PageSizeDefault = 100
 
 type Pagination struct {
 	PagingRequestId string `json:"pagingRequestId"`
-	Offset          int    `json:"offset"`
+	Page            int    `json:"page"`
 }
 
-// ParsePaginationToken - takes as pagination token and returns offset, limit,
+// ParsePaginationToken - takes as pagination token and returns page, limit,
 // and `pagingRequestId` in that order.
 func ParsePaginationToken(pToken *pagination.Token) (
 	int,
@@ -23,44 +23,44 @@ func ParsePaginationToken(pToken *pagination.Token) (
 ) {
 	var (
 		limit           = PageSizeDefault
-		offset          = 0
+		page            = 0
 		pagingRequestId = ""
 	)
 
-	if pToken != nil {
-		if pToken.Size > 0 {
-			limit = pToken.Size
-		}
-
-		if pToken.Token != "" {
-			var parsed Pagination
-			err := json.Unmarshal([]byte(pToken.Token), &parsed)
-			if err != nil {
-				return 0, 0, "", err
-			}
-			offset = parsed.Offset
-			pagingRequestId = parsed.PagingRequestId
-		}
+	if pToken == nil {
+		return page, limit, pagingRequestId, nil
 	}
-	return offset, limit, pagingRequestId, nil
+
+	if pToken.Size > 0 {
+		limit = pToken.Size
+	}
+
+	if pToken.Token == "" {
+		return page, limit, pagingRequestId, nil
+	}
+
+	var parsed Pagination
+	err := json.Unmarshal([]byte(pToken.Token), &parsed)
+	if err != nil {
+		return 0, 0, "", err
+	}
+
+	page = parsed.Page
+	pagingRequestId = parsed.PagingRequestId
+	return page, limit, pagingRequestId, nil
 }
 
-// GetNextToken given a limit and offset that were used to fetch _this_ page of
+// GetNextToken given a limit and page that were used to fetch _this_ page of
 // data, and total number of resources, return the next pagination token as a
 // string.
 func GetNextToken(
-	offset int,
+	page int,
 	limit int,
 	total int,
 ) string {
-	nextOffset := offset + limit
-	if nextOffset >= total {
-		return ""
-	}
-
 	bytes, err := json.Marshal(
 		Pagination{
-			Offset: nextOffset,
+			Page: page + 1,
 		},
 	)
 	if err != nil {

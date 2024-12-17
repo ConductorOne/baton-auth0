@@ -97,7 +97,7 @@ func (c *Client) List(
 	path string,
 	target interface{},
 	limit int,
-	offset int,
+	page int,
 ) (
 	*v2.RateLimitDescription,
 	error,
@@ -108,7 +108,7 @@ func (c *Client) List(
 		map[string]interface{}{
 			// Note: `include_totals` changes the shape of the response
 			"include_totals": true,
-			"page":           offset,
+			"page":           page,
 			"per_page":       limit,
 		},
 		&target,
@@ -126,7 +126,7 @@ func (c *Client) List(
 func (c *Client) GetUsers(
 	ctx context.Context,
 	limit int,
-	offset int,
+	page int,
 ) (
 	[]User,
 	int,
@@ -139,7 +139,7 @@ func (c *Client) GetUsers(
 		apiPathGetUsers,
 		&target,
 		limit,
-		offset,
+		page,
 	)
 	if err != nil {
 		return nil, 0, rateLimitData, err
@@ -151,7 +151,7 @@ func (c *Client) GetUsers(
 func (c *Client) GetRoles(
 	ctx context.Context,
 	limit int,
-	offset int,
+	page int,
 ) (
 	[]Role,
 	int,
@@ -164,7 +164,7 @@ func (c *Client) GetRoles(
 		apiPathGetRoles,
 		&target,
 		limit,
-		offset,
+		page,
 	)
 	if err != nil {
 		return nil, 0, rateLimitData, err
@@ -176,7 +176,7 @@ func (c *Client) GetRoles(
 func (c *Client) GetOrganizations(
 	ctx context.Context,
 	limit int,
-	offset int,
+	page int,
 ) (
 	[]Organization,
 	int,
@@ -189,7 +189,7 @@ func (c *Client) GetOrganizations(
 		apiPathGetOrganizations,
 		&target,
 		limit,
-		offset,
+		page,
 	)
 	if err != nil {
 		return nil, 0, rateLimitData, err
@@ -202,7 +202,7 @@ func (c *Client) GetOrganizationMembers(
 	ctx context.Context,
 	organizationId string,
 	limit int,
-	offset int,
+	page int,
 ) (
 	[]User,
 	int,
@@ -215,7 +215,7 @@ func (c *Client) GetOrganizationMembers(
 		fmt.Sprintf(apiPathOrganizationMembers, organizationId),
 		&target,
 		limit,
-		offset,
+		page,
 	)
 	if err != nil {
 		return nil, 0, rateLimitData, err
@@ -228,7 +228,7 @@ func (c *Client) GetRoleUsers(
 	ctx context.Context,
 	roleId string,
 	limit int,
-	offset int,
+	page int,
 ) (
 	[]User,
 	int,
@@ -241,7 +241,7 @@ func (c *Client) GetRoleUsers(
 		fmt.Sprintf(apiPathUsersForRole, roleId),
 		&target,
 		limit,
-		offset,
+		page,
 	)
 	if err != nil {
 		return nil, 0, rateLimitData, err
