@@ -2,6 +2,7 @@ package connector
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/conductorone/baton-auth0/pkg/connector/client"
@@ -35,15 +36,17 @@ func TestUsersList(t *testing.T) {
 			Token: "",
 			Size:  1,
 		}
-		for {
+
+		for i := 0; i < 2; i++ {
 			nextResources, nextToken, listAnnotations, err := c.List(ctx, nil, &pToken)
 			resources = append(resources, nextResources...)
 
 			require.Nil(t, err)
 			test.AssertNoRatelimitAnnotations(t, listAnnotations)
-			if nextToken == "" {
-				break
-			}
+			var token client.Pagination
+			err = json.Unmarshal([]byte(nextToken), &token)
+			require.Nil(t, err)
+			require.Equal(t, token.Page, i+1)
 
 			pToken.Token = nextToken
 		}
