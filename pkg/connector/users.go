@@ -66,15 +66,19 @@ func (o *userBuilder) List(
 	outputResources := make([]*v2.Resource, 0)
 	var outputAnnotations annotations.Annotations
 
-	offset, limit, _, err := client.ParsePaginationToken(pToken)
+	page, limit, _, err := client.ParsePaginationToken(pToken)
 	if err != nil {
 		return nil, "", nil, err
 	}
 
-	users, total, ratelimitData, err := o.client.GetUsers(ctx, limit, offset)
+	users, total, ratelimitData, err := o.client.GetUsers(ctx, limit, page)
 	outputAnnotations.WithRateLimiting(ratelimitData)
 	if err != nil {
 		return nil, "", outputAnnotations, err
+	}
+
+	if len(users) == 0 {
+		return outputResources, "", outputAnnotations, nil
 	}
 
 	for _, user := range users {
@@ -87,7 +91,7 @@ func (o *userBuilder) List(
 
 	// TODO(marcos): it might never be possible to get a second page if we are limited to 1,000 results.
 	// See https://auth0.com/docs/users/search/v3/view-search-results-by-page#limitation.
-	nextToken := client.GetNextToken(offset, limit, total)
+	nextToken := client.GetNextToken(page, limit, total)
 
 	return outputResources, nextToken, outputAnnotations, nil
 }
