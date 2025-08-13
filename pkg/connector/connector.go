@@ -20,6 +20,8 @@ func (d *Connector) ResourceSyncers(ctx context.Context) []connectorbuilder.Reso
 		newUserBuilder(d.client),
 		newOrganizationBuilder(d.client),
 		newRoleBuilder(d.client),
+		newResourceServerBuilder(d.client),
+		newScopeBuilder(d.client),
 	}
 }
 

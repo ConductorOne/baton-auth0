@@ -21,4 +21,16 @@ var (
 		DisplayName: "Role",
 		Traits:      []v2.ResourceType_Trait{v2.ResourceType_TRAIT_ROLE},
 	}
+
+	resourceServerResourceType = &v2.ResourceType{
+		Id:          "resource_server",
+		DisplayName: "Resource Server",
+		Traits:      []v2.ResourceType_Trait{},
+	}
+
+	scopeResourceType = &v2.ResourceType{
+		Id:          "scope",
+		DisplayName: "Scope",
+		Traits:      []v2.ResourceType_Trait{},
+	}
 )

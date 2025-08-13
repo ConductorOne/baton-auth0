@@ -78,3 +78,36 @@ type UsersResponse struct {
 	Length int    `json:"length"`
 	Users  []User `json:"users"`
 }
+
+type ResourceServerScope struct {
+	Description string `json:"description"`
+	Value       string `json:"value"`
+}
+
+type ResourceServer struct {
+	Id                                        string                `json:"id"`
+	Name                                      string                `json:"name"`
+	IsSystem                                  bool                  `json:"is_system"`
+	Identifier                                string                `json:"identifier"`
+	Scopes                                    []ResourceServerScope `json:"scopes"`
+	SigningAlg                                string                `json:"signing_alg"`
+	AllowOfflineAccess                        bool                  `json:"allow_offline_access"`
+	SkipConsentForVerifiableFirstPartyClients bool                  `json:"skip_consent_for_verifiable_first_party_clients"`
+	TokenLifetime                             int                   `json:"token_lifetime"`
+	TokenLifetimeForWeb                       int                   `json:"token_lifetime_for_web"`
+	EnforcePolicies                           bool                  `json:"enforce_policies"`
+	TokenDialect                              string                `json:"token_dialect"`
+	ConsentPolicy                             string                `json:"consent_policy"`
+}
+
+type ResourceServerResponse struct {
+	PaginatedResponse
+	ResourceServers []*ResourceServer `json:"resource_servers"`
+}
+
+type RolePermission struct {
+	PermissionName           string `json:"permission_name"`
+	Description              string `json:"description"`
+	ResourceServerName       string `json:"resource_server_name"`
+	ResourceServerIdentifier string `json:"resource_server_identifier"`
+}

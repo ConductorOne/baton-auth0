@@ -348,3 +348,76 @@ func (c *Client) RemoveUserFromOrganization(
 	// TODO MARCOS check for double revoke.
 	return rateLimitData, nil
 }
+
+func (c *Client) GetResourceServers(
+	ctx context.Context,
+	limit int,
+	page int,
+) (
+	[]*ResourceServer,
+	int,
+	*v2.RateLimitDescription,
+	error,
+) {
+	var target ResourceServerResponse
+	rateLimitData, err := c.List(
+		ctx,
+		apiPathGetResourceServers,
+		&target,
+		limit,
+		page,
+	)
+	if err != nil {
+		return nil, 0, rateLimitData, err
+	}
+
+	return target.ResourceServers, target.Total, rateLimitData, nil
+}
+
+func (c *Client) GetResourceServer(
+	ctx context.Context,
+	id string,
+) (
+	*ResourceServer,
+	*v2.RateLimitDescription,
+	error,
+) {
+	var target ResourceServer
+	response, rateLimitData, err := c.get(
+		ctx,
+		fmt.Sprintf(apiPathResourceServers, id),
+		nil,
+		&target,
+	)
+	if err != nil {
+		return nil, rateLimitData, err
+	}
+
+	defer response.Body.Close()
+
+	return &target, rateLimitData, nil
+}
+
+func (c *Client) GetRolePermissions(
+	ctx context.Context,
+	id string,
+) (
+	[]*RolePermission,
+	*v2.RateLimitDescription,
+	error,
+) {
+	var target []*RolePermission
+	response, rateLimitData, err := c.get(
+		ctx,
+		fmt.Sprintf(apiPathRolePermissions, id),
+		nil,
+		&target,
+	)
+	if err != nil {
+		return nil, rateLimitData, err
+	}
+
+	defer response.Body.Close()
+
+	return target, rateLimitData, nil
+}
