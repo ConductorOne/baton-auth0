@@ -63,6 +63,7 @@ The permissions needed are:
 - Read Organization Members
 - Read Roles
 - Read Role Members
+- Read Resource Servers
 
 
 # `baton-auth0` Command Line Usage
