@@ -11,18 +11,27 @@ import (
 )
 
 type Connector struct {
-	client *client.Client
+	client          *client.Client
+	syncPermissions bool
 }
 
 // ResourceSyncers returns a ResourceSyncer for each resource type that should be synced from the upstream service.
 func (d *Connector) ResourceSyncers(ctx context.Context) []connectorbuilder.ResourceSyncer {
-	return []connectorbuilder.ResourceSyncer{
+	resourcesSyncers := []connectorbuilder.ResourceSyncer{
 		newUserBuilder(d.client),
 		newOrganizationBuilder(d.client),
-		newRoleBuilder(d.client),
-		newResourceServerBuilder(d.client),
-		newScopeBuilder(d.client),
+		newRoleBuilder(d.client, d.syncPermissions),
 	}
+
+	if d.syncPermissions {
+		resourcesSyncers = append(
+			resourcesSyncers,
+			newResourceServerBuilder(d.client),
+			newScopeBuilder(d.client),
+		)
+	}
+
+	return resourcesSyncers
 }
 
 // Asset takes an input AssetRef and attempts to fetch it using the connector's authenticated http client
@@ -46,18 +55,14 @@ func (d *Connector) Validate(ctx context.Context) (annotations.Annotations, erro
 }
 
 // New returns a new instance of the connector.
-func New(
-	ctx context.Context,
-	baseUrl string,
-	clientId string,
-	clientSecret string,
-) (*Connector, error) {
+func New(ctx context.Context, baseUrl string, clientId string, clientSecret string, syncPermissions bool) (*Connector, error) {
 	client0, err := client.New(ctx, baseUrl, clientId, clientSecret)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Connector{
-		client: client0,
+		client:          client0,
+		syncPermissions: syncPermissions,
 	}, nil
 }

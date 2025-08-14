@@ -19,7 +19,8 @@ const roleEntitlementName = "assigned"
 const rolePermissionEntitlementName = "has_permission"
 
 type roleBuilder struct {
-	client *client.Client
+	client          *client.Client
+	syncPermissions bool
 }
 
 func (o *roleBuilder) ResourceType(ctx context.Context) *v2.ResourceType {
@@ -102,7 +103,7 @@ func (o *roleBuilder) Entitlements(
 	annotations.Annotations,
 	error,
 ) {
-	return []*v2.Entitlement{
+	ents := []*v2.Entitlement{
 		entitlement.NewAssignmentEntitlement(
 			resource,
 			roleEntitlementName,
@@ -114,19 +115,27 @@ func (o *roleBuilder) Entitlements(
 				fmt.Sprintf("Assigned %s role in Auth0", resource.DisplayName),
 			),
 		),
-		entitlement.NewPermissionEntitlement(
-			resource,
-			rolePermissionEntitlementName,
-			entitlement.WithGrantableTo(scopeResourceType),
-			entitlement.WithDisplayName(
-				fmt.Sprintf("%s %s", resource.DisplayName, rolePermissionEntitlementName),
+	}
+
+	if o.syncPermissions {
+		ents = append(
+			ents,
+			entitlement.NewPermissionEntitlement(
+				resource,
+				rolePermissionEntitlementName,
+				entitlement.WithGrantableTo(scopeResourceType),
+				entitlement.WithDisplayName(
+					fmt.Sprintf("%s %s", resource.DisplayName, rolePermissionEntitlementName),
+				),
+				entitlement.WithDescription(
+					fmt.Sprintf("Has %s role permissions in Auth0", resource.DisplayName),
+				),
+				entitlement.WithAnnotation(&v2.EntitlementImmutable{}),
 			),
-			entitlement.WithDescription(
-				fmt.Sprintf("Has %s role permissions in Auth0", resource.DisplayName),
-			),
-			entitlement.WithAnnotation(&v2.EntitlementImmutable{}),
-		),
-	}, "", nil, nil
+		)
+	}
+
+	return ents, "", nil, nil
 }
 
 // Grants always returns an empty slice for roles since they don't have any entitlements.
@@ -154,10 +163,12 @@ func (o *roleBuilder) Grants(
 			ResourceTypeID: userResourceType.Id,
 		})
 
-		bag.Push(pagination.PageState{
-			Token:          "",
-			ResourceTypeID: scopeResourceType.Id,
-		})
+		if o.syncPermissions {
+			bag.Push(pagination.PageState{
+				Token:          "",
+				ResourceTypeID: scopeResourceType.Id,
+			})
+		}
 
 		nextToken, err := bag.Marshal()
 		if err != nil {
@@ -315,6 +326,9 @@ func (r *roleBuilder) Revoke(ctx context.Context, grant *v2.Grant) (annotations.
 	return outputAnnotations, nil
 }
 
-func newRoleBuilder(client *client.Client) *roleBuilder {
-	return &roleBuilder{client: client}
+func newRoleBuilder(client *client.Client, syncPermissions bool) *roleBuilder {
+	return &roleBuilder{
+		client:          client,
+		syncPermissions: syncPermissions,
+	}
 }
