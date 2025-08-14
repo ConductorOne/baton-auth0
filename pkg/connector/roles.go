@@ -16,9 +16,11 @@ import (
 )
 
 const roleEntitlementName = "assigned"
+const rolePermissionEntitlementName = "has_permission"
 
 type roleBuilder struct {
-	client *client.Client
+	client          *client.Client
+	syncPermissions bool
 }
 
 func (o *roleBuilder) ResourceType(ctx context.Context) *v2.ResourceType {
@@ -101,7 +103,7 @@ func (o *roleBuilder) Entitlements(
 	annotations.Annotations,
 	error,
 ) {
-	return []*v2.Entitlement{
+	ents := []*v2.Entitlement{
 		entitlement.NewAssignmentEntitlement(
 			resource,
 			roleEntitlementName,
@@ -113,7 +115,27 @@ func (o *roleBuilder) Entitlements(
 				fmt.Sprintf("Assigned %s role in Auth0", resource.DisplayName),
 			),
 		),
-	}, "", nil, nil
+	}
+
+	if o.syncPermissions {
+		ents = append(
+			ents,
+			entitlement.NewPermissionEntitlement(
+				resource,
+				rolePermissionEntitlementName,
+				entitlement.WithGrantableTo(scopeResourceType),
+				entitlement.WithDisplayName(
+					fmt.Sprintf("%s %s", resource.DisplayName, rolePermissionEntitlementName),
+				),
+				entitlement.WithDescription(
+					fmt.Sprintf("Has %s role permissions in Auth0", resource.DisplayName),
+				),
+				entitlement.WithAnnotation(&v2.EntitlementImmutable{}),
+			),
+		)
+	}
+
+	return ents, "", nil, nil
 }
 
 // Grants always returns an empty slice for roles since they don't have any entitlements.
@@ -127,44 +149,125 @@ func (o *roleBuilder) Grants(
 	annotations.Annotations,
 	error,
 ) {
-	var outputAnnotations annotations.Annotations
-	page, limit, _, err := client.ParsePaginationToken(token)
+	var bag pagination.Bag
+
+	err := bag.Unmarshal(token.Token)
 	if err != nil {
 		return nil, "", nil, err
 	}
 
-	users, total, ratelimitData, err := o.client.GetRoleUsers(
-		ctx,
-		resource.Id.Resource,
-		limit,
-		page,
-	)
-	outputAnnotations.WithRateLimiting(ratelimitData)
-	if err != nil {
-		return nil, "", outputAnnotations, err
+	state := bag.Pop()
+	if state == nil {
+		bag.Push(pagination.PageState{
+			Token:          "",
+			ResourceTypeID: userResourceType.Id,
+		})
+
+		if o.syncPermissions {
+			bag.Push(pagination.PageState{
+				Token:          "",
+				ResourceTypeID: scopeResourceType.Id,
+			})
+		}
+
+		nextToken, err := bag.Marshal()
+		if err != nil {
+			return nil, "", nil, err
+		}
+
+		return nil, nextToken, nil, nil
 	}
 
-	if len(users) == 0 {
-		return nil, "", outputAnnotations, nil
-	}
+	switch state.ResourceTypeID {
+	case userResourceType.Id:
+		var outputAnnotations annotations.Annotations
+		page, limit, _, err := client.ParsePaginationTokenString(state.Token)
+		if err != nil {
+			return nil, "", nil, err
+		}
 
-	var grants []*v2.Grant
-	for _, user := range users {
-		principalId, err := resourceSdk.NewResourceID(userResourceType, user.UserId)
+		users, total, ratelimitData, err := o.client.GetRoleUsers(
+			ctx,
+			resource.Id.Resource,
+			limit,
+			page,
+		)
+		outputAnnotations.WithRateLimiting(ratelimitData)
 		if err != nil {
 			return nil, "", outputAnnotations, err
 		}
-		nextGrant := grant.NewGrant(
-			resource,
-			roleEntitlementName,
-			principalId,
+
+		if len(users) == 0 {
+			return nil, "", outputAnnotations, nil
+		}
+
+		var grants []*v2.Grant
+		for _, user := range users {
+			principalId, err := resourceSdk.NewResourceID(userResourceType, user.UserId)
+			if err != nil {
+				return nil, "", outputAnnotations, err
+			}
+			nextGrant := grant.NewGrant(
+				resource,
+				roleEntitlementName,
+				principalId,
+			)
+			grants = append(grants, nextGrant)
+		}
+
+		bag.Push(pagination.PageState{
+			Token:          client.GetNextToken(page, limit, total),
+			ResourceTypeID: userResourceType.Id,
+		})
+
+		nextToken, err := bag.Marshal()
+		if err != nil {
+			return nil, "", nil, err
+		}
+
+		return grants, nextToken, outputAnnotations, nil
+	case scopeResourceType.Id:
+		var outputAnnotations annotations.Annotations
+
+		permissions, ratelimitData, err := o.client.GetRolePermissions(
+			ctx,
+			resource.Id.Resource,
 		)
-		grants = append(grants, nextGrant)
+		outputAnnotations.WithRateLimiting(ratelimitData)
+		if err != nil {
+			return nil, "", outputAnnotations, err
+		}
+
+		if len(permissions) == 0 {
+			return nil, "", outputAnnotations, nil
+		}
+
+		var grants []*v2.Grant
+		for _, permission := range permissions {
+			// Same as formatScopeId function in scope.go
+			scopeId := fmt.Sprintf("%s:%s", permission.ResourceServerIdentifier, permission.PermissionName)
+
+			principalId, err := resourceSdk.NewResourceID(scopeResourceType, scopeId)
+			if err != nil {
+				return nil, "", outputAnnotations, err
+			}
+			nextGrant := grant.NewGrant(
+				resource,
+				rolePermissionEntitlementName,
+				principalId,
+			)
+			grants = append(grants, nextGrant)
+		}
+
+		nextToken, err := bag.Marshal()
+		if err != nil {
+			return nil, "", nil, err
+		}
+
+		return grants, nextToken, outputAnnotations, nil
+	default:
+		return nil, "", nil, fmt.Errorf("baton-auth0: unknown resource type %s", state.ResourceTypeID)
 	}
-
-	nextToken := client.GetNextToken(page, limit, total)
-
-	return grants, nextToken, outputAnnotations, nil
 }
 
 func (r *roleBuilder) Grant(
@@ -223,6 +326,9 @@ func (r *roleBuilder) Revoke(ctx context.Context, grant *v2.Grant) (annotations.
 	return outputAnnotations, nil
 }
 
-func newRoleBuilder(client *client.Client) *roleBuilder {
-	return &roleBuilder{client: client}
+func newRoleBuilder(client *client.Client, syncPermissions bool) *roleBuilder {
+	return &roleBuilder{
+		client:          client,
+		syncPermissions: syncPermissions,
+	}
 }

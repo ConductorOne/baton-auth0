@@ -20,11 +20,16 @@ var (
 		field.WithDescription("App client secret"),
 		field.WithRequired(true),
 	)
+	SyncPermissions = field.BoolField(
+		"sync-permissions",
+		field.WithDescription("Sync permissions"),
+	)
 	// ConfigurationFields defines the external configuration required for the connector to run.
 	ConfigurationFields = []field.SchemaField{
 		BaseUrlField,
 		ClientIdField,
 		ClientSecretField,
+		SyncPermissions,
 	}
 
 	ConfigurationSchema = field.NewConfiguration(ConfigurationFields)
