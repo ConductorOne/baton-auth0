@@ -50,6 +50,33 @@ func ParsePaginationToken(pToken *pagination.Token) (
 	return page, limit, pagingRequestId, nil
 }
 
+func ParsePaginationTokenString(pToken string) (
+	int,
+	int,
+	string,
+	error,
+) {
+	var (
+		limit           = PageSizeDefault
+		page            = 0
+		pagingRequestId = ""
+	)
+
+	if pToken == "" {
+		return page, limit, pagingRequestId, nil
+	}
+
+	var parsed Pagination
+	err := json.Unmarshal([]byte(pToken), &parsed)
+	if err != nil {
+		return 0, 0, "", err
+	}
+
+	page = parsed.Page
+	pagingRequestId = parsed.PagingRequestId
+	return page, limit, pagingRequestId, nil
+}
+
 // GetNextToken given a limit and page that were used to fetch _this_ page of
 // data, and total number of resources, return the next pagination token as a
 // string.
