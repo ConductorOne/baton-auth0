@@ -159,13 +159,11 @@ func (o *roleBuilder) Grants(
 	state := bag.Pop()
 	if state == nil {
 		bag.Push(pagination.PageState{
-			Token:          "",
 			ResourceTypeID: userResourceType.Id,
 		})
 
 		if o.syncPermissions {
 			bag.Push(pagination.PageState{
-				Token:          "",
 				ResourceTypeID: scopeResourceType.Id,
 			})
 		}
