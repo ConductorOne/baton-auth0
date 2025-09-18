@@ -155,9 +155,7 @@ func (o *roleBuilder) Grants(
 	if err != nil {
 		return nil, "", nil, err
 	}
-
-	state := bag.Pop()
-	if state == nil {
+	if bag.Current() == nil {
 		bag.Push(pagination.PageState{
 			ResourceTypeID: userResourceType.Id,
 		})
@@ -175,6 +173,8 @@ func (o *roleBuilder) Grants(
 
 		return nil, nextToken, nil, nil
 	}
+
+	state := bag.Current()
 
 	switch state.ResourceTypeID {
 	case userResourceType.Id:
@@ -213,12 +213,7 @@ func (o *roleBuilder) Grants(
 			grants = append(grants, nextGrant)
 		}
 
-		bag.Push(pagination.PageState{
-			Token:          client.GetNextToken(page, limit, total),
-			ResourceTypeID: userResourceType.Id,
-		})
-
-		nextToken, err := bag.Marshal()
+		nextToken, err := bag.NextToken(client.GetNextToken(page, limit, total))
 		if err != nil {
 			return nil, "", nil, err
 		}
