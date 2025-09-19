@@ -2,7 +2,16 @@ package connector
 
 import (
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
+	"github.com/conductorone/baton-sdk/pkg/annotations"
 )
+
+func skipEntitlementsAndGrants() annotations.Annotations {
+	var anno annotations.Annotations
+
+	anno.Append(&v2.SkipEntitlementsAndGrants{})
+
+	return anno
+}
 
 var (
 	// The user resource type is for all user objects from the database.
@@ -20,5 +29,18 @@ var (
 		Id:          "role",
 		DisplayName: "Role",
 		Traits:      []v2.ResourceType_Trait{v2.ResourceType_TRAIT_ROLE},
+	}
+
+	resourceServerResourceType = &v2.ResourceType{
+		Id:          "resource_server",
+		DisplayName: "Resource Server",
+		Traits:      []v2.ResourceType_Trait{},
+	}
+
+	scopeResourceType = &v2.ResourceType{
+		Id:          "scope",
+		DisplayName: "Scope",
+		Traits:      []v2.ResourceType_Trait{},
+		Annotations: skipEntitlementsAndGrants(),
 	}
 )

@@ -63,6 +63,8 @@ The permissions needed are:
 - Read Organization Members
 - Read Roles
 - Read Role Members
+- Read Resource Servers
+  - If syncPermissions it's true
 
 
 # `baton-auth0` Command Line Usage
