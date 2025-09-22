@@ -17,6 +17,8 @@ const (
 	apiPathGetResourceServers  = "/api/v2/resource-servers"
 	apiPathResourceServers     = "/api/v2/resource-servers/%s"
 	apiPathRolePermissions     = "/api/v2/roles/%s/permissions"
+	apiPathCreateUsersJob      = "/api/v2/jobs/users-exports"
+	apiPathGetJob              = "/api/v2/jobs/%s"
 )
 
 func (c *Client) getUrl(

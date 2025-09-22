@@ -29,7 +29,7 @@ func TestUsersList(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		c := newUserBuilder(percipioClient)
+		c := newUserBuilder(percipioClient, false, 1000)
 
 		resources := make([]*v2.Resource, 0)
 		pToken := pagination.Token{

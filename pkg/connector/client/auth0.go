@@ -421,3 +421,88 @@ func (c *Client) GetRolePermissions(
 
 	return target, rateLimitData, nil
 }
+
+func (c *Client) CreateJob(
+	ctx context.Context,
+	limit int,
+) (
+	*Job,
+	*v2.RateLimitDescription,
+	error,
+) {
+	bodyJSON := struct {
+		Format string     `json:"format"`
+		Limit  int        `json:"limit"`
+		Fields []JobField `json:"fields"`
+	}{
+		Format: "json",
+		Limit:  limit,
+		Fields: []JobField{
+			{
+				Name: "user_id",
+			},
+			{
+				Name: "name",
+			},
+			{
+				Name: "email",
+			},
+			{
+				Name: "nickname",
+			},
+			{
+				Name: "created_at",
+			},
+			{
+				Name: "updated_at",
+			},
+		},
+	}
+
+	var target Job
+
+	response, rateLimitData, err := c.post(
+		ctx,
+		apiPathCreateUsersJob,
+		bodyJSON,
+		&target,
+	)
+	if err != nil {
+		return nil, rateLimitData, err
+	}
+
+	defer response.Body.Close()
+
+	return &target, rateLimitData, nil
+}
+
+func (c *Client) GetJob(
+	ctx context.Context,
+	id string,
+) (
+	*Job,
+	*v2.RateLimitDescription,
+	error,
+) {
+	var target Job
+
+	// TODO(golds): we need a better way to handle cache invalidation in uhttp.
+	err := uhttp.ClearCaches(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	response, rateLimitData, err := c.get(
+		ctx,
+		fmt.Sprintf(apiPathGetJob, id),
+		nil,
+		&target,
+	)
+	if err != nil {
+		return nil, rateLimitData, err
+	}
+
+	defer response.Body.Close()
+
+	return &target, rateLimitData, nil
+}
