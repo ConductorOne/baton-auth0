@@ -11,6 +11,8 @@ import (
 	resourceSdk "github.com/conductorone/baton-sdk/pkg/types/resource"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -130,7 +132,7 @@ func (o *userBuilder) List(
 				return nil, "", anno, err
 			}
 
-			return nil, nextToken, anno, nil
+			return nil, nextToken, anno, status.Errorf(codes.Unavailable, "Sync job it's not completed: %s", job.Status)
 		}
 
 		logger.Debug("Sync job completed", zap.String("job_id", state.Id))

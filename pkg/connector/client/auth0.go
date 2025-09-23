@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -486,23 +487,32 @@ func (c *Client) GetJob(
 ) {
 	var target Job
 
-	// TODO(golds): we need a better way to handle cache invalidation in uhttp.
-	err := uhttp.ClearCaches(ctx)
+	path := c.getUrl(fmt.Sprintf(apiPathGetJob, id), make(map[string]interface{})).String()
+
+	client := &http.Client{}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, path, nil)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	response, rateLimitData, err := c.get(
-		ctx,
-		fmt.Sprintf(apiPathGetJob, id),
-		nil,
-		&target,
-	)
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.BearerToken))
+
+	response, err := client.Do(req)
 	if err != nil {
-		return nil, rateLimitData, err
+		return nil, nil, err
 	}
 
 	defer response.Body.Close()
 
-	return &target, rateLimitData, nil
+	if response.StatusCode != http.StatusOK {
+		return nil, nil, fmt.Errorf("error getting job: status code %d", response.StatusCode)
+	}
+
+	err = json.NewDecoder(response.Body).Decode(&target)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return &target, nil, nil
 }

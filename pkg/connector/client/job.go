@@ -1,6 +1,7 @@
 package client
 
 import (
+	"bufio"
 	"compress/gzip"
 	"context"
 	"encoding/json"
@@ -55,33 +56,18 @@ func process(reader io.Reader) ([]User, error) {
 	}
 	defer gzipReader.Close()
 
-	allData, err := io.ReadAll(gzipReader)
-	if err != nil {
-		return nil, err
-	}
-
-	index := 0
-	lastIndex := 0
-
 	var users []User
 
-	for len(allData) > index {
-		if allData[index] != '\n' {
-			index++
-			continue
-		}
+	scanner := bufio.NewScanner(gzipReader)
 
-		jsonData := allData[lastIndex:index]
-		lastIndex = index
-
+	for scanner.Scan() {
+		line := scanner.Bytes()
 		var user User
-		err = json.Unmarshal(jsonData, &user)
+		err = json.Unmarshal(line, &user)
 		if err != nil {
 			return nil, err
 		}
-
 		users = append(users, user)
-		index++
 	}
 
 	return users, nil
