@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -487,32 +486,20 @@ func (c *Client) GetJob(
 ) {
 	var target Job
 
-	path := c.getUrl(fmt.Sprintf(apiPathGetJob, id), make(map[string]interface{})).String()
-
-	client := &http.Client{}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, path, nil)
+	response, rateLimitData, err := c.doRequest(
+		ctx,
+		http.MethodGet,
+		fmt.Sprintf(apiPathGetJob, id),
+		nil,
+		nil,
+		&target,
+		false,
+	)
 	if err != nil {
-		return nil, nil, err
-	}
-
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.BearerToken))
-
-	response, err := client.Do(req)
-	if err != nil {
-		return nil, nil, err
+		return nil, rateLimitData, err
 	}
 
 	defer response.Body.Close()
 
-	if response.StatusCode != http.StatusOK {
-		return nil, nil, fmt.Errorf("error getting job: status code %d", response.StatusCode)
-	}
-
-	err = json.NewDecoder(response.Body).Decode(&target)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return &target, nil, nil
+	return &target, rateLimitData, nil
 }
