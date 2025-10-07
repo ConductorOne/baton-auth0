@@ -32,6 +32,7 @@ func (c *Client) get(
 		queryParameters,
 		nil,
 		target,
+		true,
 	)
 }
 
@@ -52,6 +53,7 @@ func (c *Client) post(
 		nil,
 		body,
 		target,
+		true,
 	)
 }
 
@@ -90,6 +92,7 @@ func (c *Client) delete(
 		nil,
 		body,
 		target,
+		true,
 	)
 }
 
@@ -118,6 +121,7 @@ func (c *Client) doRequest(
 	queryParameters map[string]interface{},
 	payload interface{},
 	target interface{},
+	cache bool,
 ) (
 	*http.Response,
 	*v2.RateLimitDescription,
@@ -131,13 +135,16 @@ func (c *Client) doRequest(
 		options = append(options, uhttp.WithJSONBody(payload))
 	}
 
+	if !cache {
+		options = append(options, uhttp.WithNoCache())
+	}
+
 	url := c.getUrl(path, queryParameters)
 
 	request, err := c.wrapper.NewRequest(ctx, method, url, options...)
 	if err != nil {
 		return nil, nil, err
 	}
-
 	var ratelimitData v2.RateLimitDescription
 	response, err := c.wrapper.Do(
 		request,

@@ -24,12 +24,22 @@ var (
 		"sync-permissions",
 		field.WithDescription("Sync permissions"),
 	)
+	SyncUsersByJob = field.BoolField(
+		"sync-users-by-job",
+		field.WithDescription("Sync users by job (only applicable for Auth0 tenants with more than 1000 users https://auth0.com/docs/users/search/v3/view-search-results-by-page#limitation)"),
+	)
+	SyncUsersByJobLimit = field.IntField(
+		"sync-users-by-job-limit",
+		field.WithDescription("Number of users to fetch per job (only applicable if sync-users-by-job is true)"),
+	)
 	// ConfigurationFields defines the external configuration required for the connector to run.
 	ConfigurationFields = []field.SchemaField{
 		BaseUrlField,
 		ClientIdField,
 		ClientSecretField,
 		SyncPermissions,
+		SyncUsersByJob,
+		SyncUsersByJobLimit,
 	}
 
 	ConfigurationSchema = field.NewConfiguration(ConfigurationFields)

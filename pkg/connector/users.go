@@ -2,6 +2,7 @@ package connector
 
 import (
 	"context"
+	"time"
 
 	"github.com/conductorone/baton-auth0/pkg/connector/client"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
@@ -10,10 +11,15 @@ import (
 	resourceSdk "github.com/conductorone/baton-sdk/pkg/types/resource"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type userBuilder struct {
-	client *client.Client
+	client              *client.Client
+	syncUsersByJob      bool
+	syncUsersByJobLimit int
 }
 
 func (o *userBuilder) ResourceType(ctx context.Context) *v2.ResourceType {
@@ -37,6 +43,7 @@ func userResource(user client.User, parentResourceID *v2.ResourceId) (*v2.Resour
 		resourceSdk.WithStatus(v2.UserTrait_Status_STATUS_ENABLED),
 		resourceSdk.WithUserProfile(profile),
 		resourceSdk.WithUserLogin(user.Email),
+		resourceSdk.WithCreatedAt(user.CreatedAt),
 	}
 
 	return resourceSdk.NewUserResource(
@@ -65,6 +72,86 @@ func (o *userBuilder) List(
 
 	outputResources := make([]*v2.Resource, 0)
 	var outputAnnotations annotations.Annotations
+
+	if o.syncUsersByJob {
+		type syncJobPage struct {
+			Id      string
+			Attempt int
+		}
+
+		bag, err := pagination.GenBagFromToken[syncJobPage](pToken)
+		if err != nil {
+			return nil, "", nil, err
+		}
+
+		if bag.Current() == nil {
+			job, ratelimitData, err := o.client.CreateJob(ctx, o.syncUsersByJobLimit)
+			outputAnnotations.WithRateLimiting(ratelimitData)
+			if err != nil {
+				return nil, "", outputAnnotations, err
+			}
+
+			bag.Push(syncJobPage{
+				Id:      job.Id,
+				Attempt: 0,
+			})
+
+			nextToken, err := bag.Marshal()
+			if err != nil {
+				return nil, "", outputAnnotations, err
+			}
+
+			return nil, nextToken, outputAnnotations, nil
+		}
+
+		state := bag.Pop()
+
+		job, ratelimitData, err := o.client.GetJob(ctx, state.Id)
+		outputAnnotations.WithRateLimiting(ratelimitData)
+		if err != nil {
+			return nil, "", outputAnnotations, err
+		}
+
+		logger.Debug("Sync job status", zap.String("job_id", job.Id), zap.String("status", job.Status))
+
+		if job.Status != "completed" {
+			var anno annotations.Annotations
+
+			anno.WithRateLimiting(&v2.RateLimitDescription{
+				Limit:     1,
+				Remaining: 0,
+				ResetAt:   timestamppb.New(time.Now().Add(time.Second * 10)),
+			})
+			bag.Push(syncJobPage{
+				Id:      state.Id,
+				Attempt: state.Attempt + 1,
+			})
+
+			nextToken, err := bag.Marshal()
+			if err != nil {
+				return nil, "", anno, err
+			}
+
+			return nil, nextToken, anno, status.Errorf(codes.Unavailable, "Sync job it's not completed: %s", job.Status)
+		}
+
+		logger.Debug("Sync job completed", zap.String("job_id", state.Id))
+
+		usersJob, err := o.client.ProcessUserJob(ctx, job)
+		if err != nil {
+			return nil, "", nil, err
+		}
+
+		for _, user := range usersJob {
+			userResource0, err := userResource(user, parentResourceID)
+			if err != nil {
+				return nil, "", nil, err
+			}
+			outputResources = append(outputResources, userResource0)
+		}
+
+		return outputResources, "", nil, nil
+	}
 
 	page, limit, _, err := client.ParsePaginationToken(pToken)
 	if err != nil {
@@ -124,6 +211,14 @@ func (o *userBuilder) Grants(
 	return nil, "", nil, nil
 }
 
-func newUserBuilder(client *client.Client) *userBuilder {
-	return &userBuilder{client: client}
+func newUserBuilder(
+	client *client.Client,
+	syncUsersByJob bool,
+	syncUsersByJobLimit int,
+) *userBuilder {
+	return &userBuilder{
+		client:              client,
+		syncUsersByJob:      syncUsersByJob,
+		syncUsersByJobLimit: syncUsersByJobLimit,
+	}
 }
