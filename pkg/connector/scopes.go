@@ -88,5 +88,5 @@ func scopeResource(resourceServer client.ResourceServerScope, server *client.Res
 }
 
 func formatScopeId(resourceServer client.ResourceServerScope, server *client.ResourceServer) string {
-	return fmt.Sprintf("%s/%s", server.Identifier, resourceServer.Value)
+	return fmt.Sprintf("%s:%s", server.Identifier, resourceServer.Value)
 }

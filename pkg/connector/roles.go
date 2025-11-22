@@ -252,6 +252,7 @@ func (o *roleBuilder) Grants(
 			grants = append(grants, nextGrant)
 		}
 
+		bag.Pop()
 		nextToken, err := bag.Marshal()
 		if err != nil {
 			return nil, "", nil, err
