@@ -111,3 +111,18 @@ type RolePermission struct {
 	ResourceServerName       string `json:"resource_server_name"`
 	ResourceServerIdentifier string `json:"resource_server_identifier"`
 }
+
+type JobField struct {
+	Name string `json:"name"`
+}
+
+type Job struct {
+	Type      string     `json:"type"`
+	Status    string     `json:"status"`
+	Format    string     `json:"format"`
+	Limit     int        `json:"limit"`
+	Fields    []JobField `json:"fields"`
+	CreatedAt time.Time  `json:"created_at"`
+	Id        string     `json:"id"`
+	Location  string     `json:"location,omitempty"`
+}

@@ -2,6 +2,7 @@ package connector
 
 import (
 	"context"
+	"errors"
 	"io"
 
 	"github.com/conductorone/baton-auth0/pkg/connector/client"
@@ -11,14 +12,16 @@ import (
 )
 
 type Connector struct {
-	client          *client.Client
-	syncPermissions bool
+	client              *client.Client
+	syncPermissions     bool
+	syncUsersByJob      bool
+	syncUsersByJobLimit int
 }
 
 // ResourceSyncers returns a ResourceSyncer for each resource type that should be synced from the upstream service.
 func (d *Connector) ResourceSyncers(ctx context.Context) []connectorbuilder.ResourceSyncer {
 	resourcesSyncers := []connectorbuilder.ResourceSyncer{
-		newUserBuilder(d.client),
+		newUserBuilder(d.client, d.syncUsersByJob, d.syncUsersByJobLimit),
 		newOrganizationBuilder(d.client),
 		newRoleBuilder(d.client, d.syncPermissions),
 	}
@@ -51,18 +54,32 @@ func (d *Connector) Metadata(ctx context.Context) (*v2.ConnectorMetadata, error)
 // Validate is called to ensure that the connector is properly configured. It should exercise any API credentials
 // to be sure that they are valid.
 func (d *Connector) Validate(ctx context.Context) (annotations.Annotations, error) {
+	if d.syncUsersByJob && d.syncUsersByJobLimit <= 0 {
+		return nil, errors.New("syncUsersByJobLimit must be greater than zero")
+	}
+
 	return nil, nil
 }
 
 // New returns a new instance of the connector.
-func New(ctx context.Context, baseUrl string, clientId string, clientSecret string, syncPermissions bool) (*Connector, error) {
+func New(
+	ctx context.Context,
+	baseUrl string,
+	clientId string,
+	clientSecret string,
+	syncPermissions bool,
+	syncUsersByJob bool,
+	syncUsersByJobLimit int,
+) (*Connector, error) {
 	client0, err := client.New(ctx, baseUrl, clientId, clientSecret)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Connector{
-		client:          client0,
-		syncPermissions: syncPermissions,
+		client:              client0,
+		syncPermissions:     syncPermissions,
+		syncUsersByJob:      syncUsersByJob,
+		syncUsersByJobLimit: syncUsersByJobLimit,
 	}, nil
 }
