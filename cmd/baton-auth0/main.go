@@ -27,7 +27,7 @@ func main() {
 		ctx,
 		connectorName,
 		getConnector,
-		config2.ConfigurationSchema,
+		config2.Config,
 	)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
