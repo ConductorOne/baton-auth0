@@ -1,9 +1,10 @@
+# This file is managed by baton-admin. Do not edit directly.
 name: Release
 
 on:
   push:
     tags:
-      - '*'
+      - "*"
 
 jobs:
   release:
