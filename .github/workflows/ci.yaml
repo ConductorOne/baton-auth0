@@ -1,15 +1,20 @@
 name: ci
-on: pull_request
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+  push:
+    branches:
+      - main
 jobs:
   go-lint:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
       - name: Install Go
         uses: actions/setup-go@v5
         with:
-          go-version: 1.22.x
-      - name: Checkout code
-        uses: actions/checkout@v4
+          go-version-file: 'go.mod'
       - name: Run linters
         uses: golangci/golangci-lint-action@v8
         with:
@@ -18,73 +23,19 @@ jobs:
   go-test:
     strategy:
       matrix:
-        go-version: [1.22.x]
         platform: [ubuntu-latest]
     runs-on: ${{ matrix.platform }}
     steps:
-      - name: Install Go
-        if: success()
-        uses: actions/setup-go@v5
-        with:
-          go-version: ${{ matrix.go-version }}
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Install Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
       - name: go tests
         run: go test -v -covermode=count -json ./... > test.json
       - name: annotate go tests
         if: always()
-        uses: guyarb/golang-test-annotations@v0.5.1
+        uses: guyarb/golang-test-annotations@v0.6.0
         with:
           test-results: test.json
-
-  test:
-    runs-on: ubuntu-latest
-    env:
-      BATON_LOG_LEVEL: debug
-      BATON_AUTH0_BASE_URL: "https://dev-n8a8p1kmt7k0ebdz.us.auth0.com"
-      BATON_AUTH0_CLIENT_ID: EiajnMCHSnpjNdhAtQZ3SkG2cxE7JGII
-      BATON_AUTH0_CLIENT_SECRET: ${{ secrets.BATON_AUTH0_CLIENT_SECRET }}
-
-      CONNECTOR_GRANT: 'organization:org_TcURzPaMeezOd7N4:member:user:auth0|6722c078392d928041854a20'
-      CONNECTOR_ENTITLEMENT: 'organization:org_TcURzPaMeezOd7N4:member'
-      CONNECTOR_PRINCIPAL: 'auth0|6722c078392d928041854a20' # This is the user ID
-      CONNECTOR_PRINCIPAL_TYPE: 'user'
-    steps:
-      - name: Install Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: 1.22.x
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Build baton-auth0
-        run: go build ./cmd/baton-auth0
-      - name: Run baton-auth0
-        run: ./baton-auth0
-
-      - name: Install baton
-        run: ./scripts/get-baton.sh && mv baton /usr/local/bin
-
-      - name: Get baton resources
-        run: baton resources
-
-      - name: Grant entitlement (in case previous ci run failed)
-        run: ./baton-auth0 --grant-entitlement="${{ env.CONNECTOR_ENTITLEMENT }}" --grant-principal="${{ env.CONNECTOR_PRINCIPAL }}" --grant-principal-type="${{ env.CONNECTOR_PRINCIPAL_TYPE }}"
-
-      - name: Check for grant before revoking
-        run:
-          ./baton-auth0 && baton grants --entitlement="${{ env.CONNECTOR_ENTITLEMENT }}" --output-format=json | jq --exit-status ".grants[].principal.id.resource == \"${{ env.CONNECTOR_PRINCIPAL }}\""
-
-      - name: Revoke grants
-        run: ./baton-auth0 --revoke-grant="${{ env.CONNECTOR_GRANT }}"
-
-      - name: Check grant was revoked
-        run: ./baton-auth0 && baton grants --entitlement="${{ env.CONNECTOR_ENTITLEMENT }}" --output-format=json | jq --exit-status "if .grants then .grants[]?.principal.id.resource != \"${{ env.CONNECTOR_PRINCIPAL }}\" else . end"
-
-      - name: Grant entitlement
-        run: ./baton-auth0 --grant-entitlement="${{ env.CONNECTOR_ENTITLEMENT }}" --grant-principal="${{ env.CONNECTOR_PRINCIPAL }}" --grant-principal-type="${{ env.CONNECTOR_PRINCIPAL_TYPE }}"
-
-      - name: Check grant was re-granted
-        run:
-          ./baton-auth0 && baton grants --entitlement="${{ env.CONNECTOR_ENTITLEMENT }}" --output-format=json | jq --exit-status ".grants[].principal.id.resource == \"${{ env.CONNECTOR_PRINCIPAL }}\""
-
