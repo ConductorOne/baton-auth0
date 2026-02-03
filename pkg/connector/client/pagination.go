@@ -85,9 +85,16 @@ func GetNextToken(
 	limit int,
 	total int,
 ) string {
+	nextPage := page + 1
+	nextOffset := nextPage * limit
+
+	if nextOffset >= total {
+		return ""
+	}
+
 	bytes, err := json.Marshal(
 		Pagination{
-			Page: page + 1,
+			Page: nextPage,
 		},
 	)
 	if err != nil {
