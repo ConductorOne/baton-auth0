@@ -43,6 +43,11 @@ func TestUsersList(t *testing.T) {
 
 			require.Nil(t, err)
 			test.AssertNoRatelimitAnnotations(t, listAnnotations)
+
+			if nextToken == "" {
+				break
+			}
+
 			var token client.Pagination
 			err = json.Unmarshal([]byte(nextToken), &token)
 			require.Nil(t, err)
