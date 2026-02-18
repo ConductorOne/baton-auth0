@@ -8,6 +8,11 @@ import (
 
 const PageSizeDefault = 100
 
+// Auth0UserSearchMaxResults is the hard limit imposed by Auth0's User Search API.
+// Paginating beyond this limit results in a 400 error.
+// See https://auth0.com/docs/manage-users/user-search/view-search-results-by-page#limitation.
+const Auth0UserSearchMaxResults = 1000
+
 type Pagination struct {
 	PagingRequestId string `json:"pagingRequestId"`
 	Page            int    `json:"page"`

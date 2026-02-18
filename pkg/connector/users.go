@@ -92,8 +92,17 @@ func (o *userBuilder) List(
 		outputResources = append(outputResources, userResource0)
 	}
 
-	// TODO(marcos): it might never be possible to get a second page if we are limited to 1,000 results.
-	// See https://auth0.com/docs/users/search/v3/view-search-results-by-page#limitation.
+	// Auth0's User Search API enforces a hard cap of 1,000 results, even when paginating.
+	// Requesting beyond this limit returns a 400 error.
+	// See https://auth0.com/docs/manage-users/user-search/view-search-results-by-page#limitation.
+	if total > client.Auth0UserSearchMaxResults {
+		logger.Warn(
+			"Auth0 user search API limits results to 1000 users. Some users may not be synced.",
+			zap.Int("total_users", total),
+			zap.Int("synced_limit", client.Auth0UserSearchMaxResults),
+		)
+		total = client.Auth0UserSearchMaxResults
+	}
 	nextToken := client.GetNextToken(page, limit, total)
 
 	return outputResources, nextToken, outputAnnotations, nil
