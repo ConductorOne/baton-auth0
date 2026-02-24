@@ -13,7 +13,7 @@ import (
 
 type Client struct {
 	wrapper     *uhttp.BaseHttpClient
-	BearerToken string
+	BearerToken string //nolint:gosec // intentional: stores the OAuth bearer token for API authentication
 	BaseUrl     *url.URL
 }
 

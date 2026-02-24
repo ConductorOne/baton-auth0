@@ -97,7 +97,7 @@ func (o *userBuilder) List(
 	// See https://auth0.com/docs/manage-users/user-search/view-search-results-by-page#limitation.
 	if total > client.Auth0UserSearchMaxResults {
 		logger.Warn(
-			"Auth0 user search API limits results to 1000 users. Some users may not be synced.",
+			"Auth0 user search API limits results. Some users may not be synced.",
 			zap.Int("total_users", total),
 			zap.Int("synced_limit", client.Auth0UserSearchMaxResults),
 		)
