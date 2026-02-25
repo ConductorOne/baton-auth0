@@ -22,22 +22,22 @@ func newScopeBuilder(client *client.Client) *scopeBuilder {
 	return &scopeBuilder{client: client}
 }
 
-func (r *scopeBuilder) ResourceType(ctx context.Context) *v2.ResourceType {
+func (r *scopeBuilder) ResourceType(_ context.Context) *v2.ResourceType {
 	return scopeResourceType
 }
 
-func (r *scopeBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId, pToken *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
-	page, limit, _, err := client.ParsePaginationToken(pToken)
+func (r *scopeBuilder) List(ctx context.Context, _ *v2.ResourceId, pToken *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
+	page, limit, _, _, _, err := client.ParsePaginationToken(pToken)
 	if err != nil {
 		return nil, "", nil, err
 	}
 	var outputAnnotations annotations.Annotations
 
-	resourcesServer, total, ratelimitData, err := r.client.GetResourceServers(ctx, limit, page)
-	outputAnnotations.WithRateLimiting(ratelimitData)
+	resourcesServer, total, rateLimitData, err := r.client.GetResourceServers(ctx, limit, page)
 	if err != nil {
 		return nil, "", outputAnnotations, err
 	}
+	outputAnnotations.WithRateLimiting(rateLimitData)
 
 	if len(resourcesServer) == 0 {
 		return nil, "", outputAnnotations, nil
@@ -54,16 +54,16 @@ func (r *scopeBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId
 		}
 	}
 
-	nextToken := client.GetNextToken(page, limit, total)
+	nextToken := client.GetNextToken(page, limit, total, nil)
 
 	return outputResources, nextToken, outputAnnotations, nil
 }
 
-func (r *scopeBuilder) Entitlements(ctx context.Context, resource *v2.Resource, pToken *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
+func (r *scopeBuilder) Entitlements(_ context.Context, _ *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
 	return nil, "", nil, nil
 }
 
-func (r *scopeBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
+func (r *scopeBuilder) Grants(_ context.Context, _ *v2.Resource, _ *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
 	return nil, "", nil, nil
 }
 

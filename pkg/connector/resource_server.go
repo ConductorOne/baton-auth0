@@ -23,22 +23,22 @@ func newResourceServerBuilder(client *client.Client) *resourceServerBuilder {
 	return &resourceServerBuilder{client: client}
 }
 
-func (r *resourceServerBuilder) ResourceType(ctx context.Context) *v2.ResourceType {
+func (r *resourceServerBuilder) ResourceType(_ context.Context) *v2.ResourceType {
 	return resourceServerResourceType
 }
 
-func (r *resourceServerBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId, pToken *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
-	page, limit, _, err := client.ParsePaginationToken(pToken)
+func (r *resourceServerBuilder) List(ctx context.Context, _ *v2.ResourceId, pToken *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
+	page, limit, _, _, _, err := client.ParsePaginationToken(pToken)
 	if err != nil {
 		return nil, "", nil, err
 	}
 	var outputAnnotations annotations.Annotations
 
-	resourcesServer, total, ratelimitData, err := r.client.GetResourceServers(ctx, limit, page)
-	outputAnnotations.WithRateLimiting(ratelimitData)
+	resourcesServer, total, rateLimitData, err := r.client.GetResourceServers(ctx, limit, page)
 	if err != nil {
 		return nil, "", outputAnnotations, err
 	}
+	outputAnnotations.WithRateLimiting(rateLimitData)
 
 	if len(resourcesServer) == 0 {
 		return nil, "", outputAnnotations, nil
@@ -53,12 +53,12 @@ func (r *resourceServerBuilder) List(ctx context.Context, parentResourceID *v2.R
 		outputResources = append(outputResources, organizationResource0)
 	}
 
-	nextToken := client.GetNextToken(page, limit, total)
+	nextToken := client.GetNextToken(page, limit, total, nil)
 
 	return outputResources, nextToken, outputAnnotations, nil
 }
 
-func (r *resourceServerBuilder) Entitlements(ctx context.Context, resource *v2.Resource, pToken *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
+func (r *resourceServerBuilder) Entitlements(_ context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
 	ent := []*v2.Entitlement{
 		entitlement.NewPermissionEntitlement(
 			resource,
@@ -73,13 +73,13 @@ func (r *resourceServerBuilder) Entitlements(ctx context.Context, resource *v2.R
 	return ent, "", nil, nil
 }
 
-func (r *resourceServerBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
+func (r *resourceServerBuilder) Grants(ctx context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
 	var outputAnnotations annotations.Annotations
-	server, ratelimitData, err := r.client.GetResourceServer(ctx, resource.Id.Resource)
-	outputAnnotations.WithRateLimiting(ratelimitData)
+	server, rateLimitData, err := r.client.GetResourceServer(ctx, resource.Id.Resource)
 	if err != nil {
 		return nil, "", nil, err
 	}
+	outputAnnotations.WithRateLimiting(rateLimitData)
 
 	grantsResponse := make([]*v2.Grant, 0, len(server.Scopes))
 	for _, scope := range server.Scopes {

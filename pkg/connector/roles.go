@@ -29,7 +29,7 @@ type roleBuilder struct {
 	syncPermissions bool
 }
 
-func (o *roleBuilder) ResourceType(ctx context.Context) *v2.ResourceType {
+func (o *roleBuilder) ResourceType(_ context.Context) *v2.ResourceType {
 	return roleResourceType
 }
 
@@ -70,16 +70,16 @@ func (o *roleBuilder) List(
 	outputResources := make([]*v2.Resource, 0)
 	var outputAnnotations annotations.Annotations
 
-	page, limit, _, err := client.ParsePaginationToken(pToken)
+	page, limit, _, _, _, err := client.ParsePaginationToken(pToken)
 	if err != nil {
 		return nil, "", nil, err
 	}
 
-	roles, total, ratelimitData, err := o.client.GetRoles(ctx, limit, page)
-	outputAnnotations.WithRateLimiting(ratelimitData)
+	roles, total, rateLimitData, err := o.client.GetRoles(ctx, limit, page)
 	if err != nil {
 		return nil, "", outputAnnotations, err
 	}
+	outputAnnotations.WithRateLimiting(rateLimitData)
 
 	if len(roles) == 0 {
 		return outputResources, "", outputAnnotations, nil
@@ -93,7 +93,7 @@ func (o *roleBuilder) List(
 		outputResources = append(outputResources, roleResource0)
 	}
 
-	nextToken := client.GetNextToken(page, limit, total)
+	nextToken := client.GetNextToken(page, limit, total, nil)
 
 	return outputResources, nextToken, outputAnnotations, nil
 }
@@ -190,16 +190,16 @@ func (o *roleBuilder) Grants(
 			return nil, "", nil, err
 		}
 
-		users, total, ratelimitData, err := o.client.GetRoleUsers(
+		users, total, rateLimitData, err := o.client.GetRoleUsers(
 			ctx,
 			resource.Id.Resource,
 			limit,
 			page,
 		)
-		outputAnnotations.WithRateLimiting(ratelimitData)
 		if err != nil {
 			return nil, "", outputAnnotations, err
 		}
+		outputAnnotations.WithRateLimiting(rateLimitData)
 
 		if len(users) == 0 {
 			return nil, "", outputAnnotations, nil
@@ -219,7 +219,7 @@ func (o *roleBuilder) Grants(
 			grants = append(grants, nextGrant)
 		}
 
-		nextToken, err := bag.NextToken(client.GetNextToken(page, limit, total))
+		nextToken, err := bag.NextToken(client.GetNextToken(page, limit, total, nil))
 		if err != nil {
 			return nil, "", nil, err
 		}
@@ -228,14 +228,14 @@ func (o *roleBuilder) Grants(
 	case scopeResourceType.Id:
 		var outputAnnotations annotations.Annotations
 
-		permissions, ratelimitData, err := o.client.GetRolePermissions(
+		permissions, rateLimitData, err := o.client.GetRolePermissions(
 			ctx,
 			resource.Id.Resource,
 		)
-		outputAnnotations.WithRateLimiting(ratelimitData)
 		if err != nil {
 			return nil, "", outputAnnotations, err
 		}
+		outputAnnotations.WithRateLimiting(rateLimitData)
 
 		if len(permissions) == 0 {
 			return nil, "", outputAnnotations, nil
@@ -291,11 +291,11 @@ func (r *roleBuilder) Grant(
 	}
 
 	var outputAnnotations annotations.Annotations
-	ratelimitData, err := r.client.AddUserToRole(ctx, roleId, userId)
-	outputAnnotations.WithRateLimiting(ratelimitData)
+	rateLimitData, err := r.client.AddUserToRole(ctx, roleId, userId)
 	if err != nil {
 		return outputAnnotations, fmt.Errorf("baton-aouth0: failed to add user to role: %s", err.Error())
 	}
+	outputAnnotations.WithRateLimiting(rateLimitData)
 
 	return outputAnnotations, nil
 }
@@ -317,12 +317,12 @@ func (r *roleBuilder) Revoke(ctx context.Context, grant *v2.Grant) (annotations.
 	}
 
 	var outputAnnotations annotations.Annotations
-	ratelimitData, err := r.client.RemoveUserFromRole(ctx, roleId, userId)
-	outputAnnotations.WithRateLimiting(ratelimitData)
-
+	rateLimitData, err := r.client.RemoveUserFromRole(ctx, roleId, userId)
 	if err != nil {
 		return outputAnnotations, fmt.Errorf("baton-auth0: failed to revoke membership to role: %s", err.Error())
 	}
+	outputAnnotations.WithRateLimiting(rateLimitData)
+
 	return outputAnnotations, nil
 }
 

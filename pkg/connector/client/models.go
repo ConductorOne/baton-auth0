@@ -33,9 +33,9 @@ type OrganizationsResponse struct {
 }
 
 type PaginatedResponse struct {
-	Start int `json:"start"`
-	Limit int `json:"limit"`
-	Total int `json:"total"`
+	Start int `json:"start,omitempty"`
+	Limit int `json:"limit,omitempty"`
+	Total int `json:"total,omitempty"`
 }
 
 type Role struct {

@@ -2,6 +2,7 @@ package connector
 
 import (
 	"context"
+	"time"
 
 	"github.com/conductorone/baton-auth0/pkg/connector/client"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
@@ -19,7 +20,7 @@ type userBuilder struct {
 	client *client.Client
 }
 
-func (o *userBuilder) ResourceType(ctx context.Context) *v2.ResourceType {
+func (o *userBuilder) ResourceType(_ context.Context) *v2.ResourceType {
 	return userResourceType
 }
 
@@ -69,22 +70,27 @@ func (o *userBuilder) List(
 	outputResources := make([]*v2.Resource, 0)
 	var outputAnnotations annotations.Annotations
 
-	page, limit, _, err := client.ParsePaginationToken(pToken)
+	page, limit, _, since, until, err := client.ParsePaginationToken(pToken)
 	if err != nil {
 		return nil, "", nil, err
 	}
 
-	users, total, ratelimitData, err := o.client.GetUsers(ctx, limit, page)
-	outputAnnotations.WithRateLimiting(ratelimitData)
+	users, total, rateLimitData, err := o.client.GetUsers(ctx, limit, page, since, until)
 	if err != nil {
 		return nil, "", outputAnnotations, err
 	}
+	outputAnnotations.WithRateLimiting(rateLimitData)
 
 	if len(users) == 0 {
 		return outputResources, "", outputAnnotations, nil
 	}
 
+	var newestCreatedAt time.Time
 	for _, user := range users {
+		if user.CreatedAt.After(newestCreatedAt) {
+			newestCreatedAt = user.CreatedAt
+		}
+
 		userResource0, err := userResource(user, parentResourceID)
 		if err != nil {
 			return nil, "", nil, err
@@ -103,7 +109,7 @@ func (o *userBuilder) List(
 		)
 		total = client.Auth0UserSearchMaxResults
 	}
-	nextToken := client.GetNextToken(page, limit, total)
+	nextToken := client.GetNextToken(page, limit, total, &newestCreatedAt)
 
 	return outputResources, nextToken, outputAnnotations, nil
 }

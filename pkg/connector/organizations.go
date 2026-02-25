@@ -70,16 +70,16 @@ func (o *organizationBuilder) List(
 	outputResources := make([]*v2.Resource, 0)
 	var outputAnnotations annotations.Annotations
 
-	page, limit, _, err := client.ParsePaginationToken(pToken)
+	page, limit, _, _, _, err := client.ParsePaginationToken(pToken)
 	if err != nil {
 		return nil, "", nil, err
 	}
 
-	organizations, total, ratelimitData, err := o.client.GetOrganizations(ctx, limit, page)
-	outputAnnotations.WithRateLimiting(ratelimitData)
+	organizations, total, rateLimitData, err := o.client.GetOrganizations(ctx, limit, page)
 	if err != nil {
 		return nil, "", outputAnnotations, err
 	}
+	outputAnnotations.WithRateLimiting(rateLimitData)
 
 	if len(organizations) == 0 {
 		return outputResources, "", outputAnnotations, nil
@@ -93,7 +93,7 @@ func (o *organizationBuilder) List(
 		outputResources = append(outputResources, organizationResource0)
 	}
 
-	nextToken := client.GetNextToken(page, limit, total)
+	nextToken := client.GetNextToken(page, limit, total, nil)
 
 	return outputResources, nextToken, outputAnnotations, nil
 }
@@ -134,21 +134,21 @@ func (o *organizationBuilder) Grants(
 	error,
 ) {
 	var outputAnnotations annotations.Annotations
-	page, limit, _, err := client.ParsePaginationToken(token)
+	page, limit, _, _, _, err := client.ParsePaginationToken(token)
 	if err != nil {
 		return nil, "", nil, err
 	}
 
-	members, total, ratelimitData, err := o.client.GetOrganizationMembers(
+	members, total, rateLimitData, err := o.client.GetOrganizationMembers(
 		ctx,
 		resource.Id.Resource,
 		limit,
 		page,
 	)
-	outputAnnotations.WithRateLimiting(ratelimitData)
 	if err != nil {
 		return nil, "", outputAnnotations, err
 	}
+	outputAnnotations.WithRateLimiting(rateLimitData)
 
 	if len(members) == 0 {
 		return nil, "", outputAnnotations, nil
@@ -168,7 +168,7 @@ func (o *organizationBuilder) Grants(
 		grants = append(grants, nextGrant)
 	}
 
-	nextToken := client.GetNextToken(page, limit, total)
+	nextToken := client.GetNextToken(page, limit, total, nil)
 
 	return grants, nextToken, outputAnnotations, nil
 }
@@ -194,11 +194,11 @@ func (o *organizationBuilder) Grant(
 	}
 
 	var outputAnnotations annotations.Annotations
-	ratelimitData, err := o.client.AddUserToOrganization(ctx, organizationId, userId)
-	outputAnnotations.WithRateLimiting(ratelimitData)
+	rateLimitData, err := o.client.AddUserToOrganization(ctx, organizationId, userId)
 	if err != nil {
 		return outputAnnotations, fmt.Errorf("baton-aouth0: failed to add user to organization: %s", err.Error())
 	}
+	outputAnnotations.WithRateLimiting(rateLimitData)
 
 	return outputAnnotations, nil
 }
@@ -220,12 +220,12 @@ func (o *organizationBuilder) Revoke(ctx context.Context, grant *v2.Grant) (anno
 	}
 
 	var outputAnnotations annotations.Annotations
-	ratelimitData, err := o.client.RemoveUserFromOrganization(ctx, organizationId, userId)
-	outputAnnotations.WithRateLimiting(ratelimitData)
-
+	rateLimitData, err := o.client.RemoveUserFromOrganization(ctx, organizationId, userId)
 	if err != nil {
 		return outputAnnotations, fmt.Errorf("baton-auth0: failed to revoke membership to organization: %s", err.Error())
 	}
+	outputAnnotations.WithRateLimiting(rateLimitData)
+
 	return outputAnnotations, nil
 }
 
