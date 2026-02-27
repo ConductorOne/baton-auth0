@@ -20,7 +20,7 @@ type userBuilder struct {
 	client *client.Client
 }
 
-func (o *userBuilder) ResourceType(_ context.Context) *v2.ResourceType {
+func (b *userBuilder) ResourceType(_ context.Context) *v2.ResourceType {
 	return userResourceType
 }
 
@@ -54,7 +54,7 @@ func userResource(user client.User, parentResourceID *v2.ResourceId) (*v2.Resour
 
 // List returns all the users from the database as resource objects.
 // Users include a UserTrait because they are the 'shape' of a standard user.
-func (o *userBuilder) List(
+func (b *userBuilder) List(
 	ctx context.Context,
 	parentResourceID *v2.ResourceId,
 	pToken *pagination.Token,
@@ -64,8 +64,8 @@ func (o *userBuilder) List(
 	annotations.Annotations,
 	error,
 ) {
-	logger := ctxzap.Extract(ctx)
-	logger.Debug("Starting Users List", zap.String("token", pToken.Token))
+	l := ctxzap.Extract(ctx)
+	l.Debug("Starting Users List", zap.String("pagination_token", pToken.Token))
 
 	outputResources := make([]*v2.Resource, 0)
 	var outputAnnotations annotations.Annotations
@@ -75,7 +75,7 @@ func (o *userBuilder) List(
 		return nil, "", nil, err
 	}
 
-	users, total, rateLimitData, err := o.client.GetUsers(ctx, limit, page, since, until)
+	users, total, rateLimitData, err := b.client.GetUsers(ctx, limit, page, since, until)
 	if err != nil {
 		return nil, "", outputAnnotations, err
 	}
@@ -106,7 +106,7 @@ func (o *userBuilder) List(
 	// Requesting beyond this limit returns a 400 error.
 	// See https://auth0.com/docs/manage-users/user-search/view-search-results-by-page#limitation.
 	if total > client.Auth0UserSearchMaxResults {
-		logger.Debug(
+		l.Debug(
 			"Auth0 user search API limits results. Some users may not be synced.",
 			zap.Int("total_users", total),
 			zap.Int("synced_limit", client.Auth0UserSearchMaxResults),
@@ -120,7 +120,7 @@ func (o *userBuilder) List(
 }
 
 // Entitlements always returns an empty slice for users.
-func (o *userBuilder) Entitlements(
+func (b *userBuilder) Entitlements(
 	_ context.Context,
 	_ *v2.Resource,
 	_ *pagination.Token,
@@ -134,7 +134,7 @@ func (o *userBuilder) Entitlements(
 }
 
 // Grants always returns an empty slice for users since they don't have any entitlements.
-func (o *userBuilder) Grants(
+func (b *userBuilder) Grants(
 	_ context.Context,
 	_ *v2.Resource,
 	_ *pagination.Token,

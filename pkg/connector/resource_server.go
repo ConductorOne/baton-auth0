@@ -8,8 +8,8 @@ import (
 	"github.com/conductorone/baton-sdk/pkg/annotations"
 	"github.com/conductorone/baton-sdk/pkg/connectorbuilder"
 	"github.com/conductorone/baton-sdk/pkg/pagination"
-	"github.com/conductorone/baton-sdk/pkg/types/entitlement"
-	"github.com/conductorone/baton-sdk/pkg/types/grant"
+	sdkEntitlement "github.com/conductorone/baton-sdk/pkg/types/entitlement"
+	sdkGrant "github.com/conductorone/baton-sdk/pkg/types/grant"
 	"github.com/conductorone/baton-sdk/pkg/types/resource"
 )
 
@@ -23,18 +23,18 @@ func newResourceServerBuilder(client *client.Client) *resourceServerBuilder {
 	return &resourceServerBuilder{client: client}
 }
 
-func (r *resourceServerBuilder) ResourceType(_ context.Context) *v2.ResourceType {
+func (b *resourceServerBuilder) ResourceType(_ context.Context) *v2.ResourceType {
 	return resourceServerResourceType
 }
 
-func (r *resourceServerBuilder) List(ctx context.Context, _ *v2.ResourceId, pToken *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
+func (b *resourceServerBuilder) List(ctx context.Context, _ *v2.ResourceId, pToken *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
 	page, limit, _, err := client.ParsePaginationToken(pToken)
 	if err != nil {
 		return nil, "", nil, err
 	}
 	var outputAnnotations annotations.Annotations
 
-	resourcesServer, total, rateLimitData, err := r.client.GetResourceServers(ctx, limit, page)
+	resourcesServer, total, rateLimitData, err := b.client.GetResourceServers(ctx, limit, page)
 	if err != nil {
 		return nil, "", outputAnnotations, err
 	}
@@ -58,24 +58,24 @@ func (r *resourceServerBuilder) List(ctx context.Context, _ *v2.ResourceId, pTok
 	return outputResources, nextToken, outputAnnotations, nil
 }
 
-func (r *resourceServerBuilder) Entitlements(_ context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
+func (b *resourceServerBuilder) Entitlements(_ context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
 	ent := []*v2.Entitlement{
-		entitlement.NewPermissionEntitlement(
+		sdkEntitlement.NewPermissionEntitlement(
 			resource,
 			"scope",
-			entitlement.WithGrantableTo(scopeResourceType),
-			entitlement.WithDisplayName("Scope"),
-			entitlement.WithDescription("The scope of the resource server, which defines the permissions granted to the resource server."),
-			entitlement.WithAnnotation(&v2.EntitlementImmutable{}),
+			sdkEntitlement.WithGrantableTo(scopeResourceType),
+			sdkEntitlement.WithDisplayName("Scope"),
+			sdkEntitlement.WithDescription("The scope of the resource server, which defines the permissions granted to the resource server."),
+			sdkEntitlement.WithAnnotation(&v2.EntitlementImmutable{}),
 		),
 	}
 
 	return ent, "", nil, nil
 }
 
-func (r *resourceServerBuilder) Grants(ctx context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
+func (b *resourceServerBuilder) Grants(ctx context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
 	var outputAnnotations annotations.Annotations
-	server, rateLimitData, err := r.client.GetResourceServer(ctx, resource.Id.Resource)
+	server, rateLimitData, err := b.client.GetResourceServer(ctx, resource.Id.Resource)
 	if err != nil {
 		return nil, "", nil, err
 	}
@@ -83,7 +83,7 @@ func (r *resourceServerBuilder) Grants(ctx context.Context, resource *v2.Resourc
 
 	grantsResponse := make([]*v2.Grant, 0, len(server.Scopes))
 	for _, scope := range server.Scopes {
-		newGrant := grant.NewGrant(resource, "scope", &v2.ResourceId{
+		newGrant := sdkGrant.NewGrant(resource, "scope", &v2.ResourceId{
 			ResourceType: scopeResourceType.Id,
 			Resource:     formatScopeId(scope, server),
 		})

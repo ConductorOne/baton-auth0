@@ -22,18 +22,18 @@ func newScopeBuilder(client *client.Client) *scopeBuilder {
 	return &scopeBuilder{client: client}
 }
 
-func (r *scopeBuilder) ResourceType(_ context.Context) *v2.ResourceType {
+func (b *scopeBuilder) ResourceType(_ context.Context) *v2.ResourceType {
 	return scopeResourceType
 }
 
-func (r *scopeBuilder) List(ctx context.Context, _ *v2.ResourceId, pToken *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
+func (b *scopeBuilder) List(ctx context.Context, _ *v2.ResourceId, pToken *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
 	page, limit, _, err := client.ParsePaginationToken(pToken)
 	if err != nil {
 		return nil, "", nil, err
 	}
 	var outputAnnotations annotations.Annotations
 
-	resourcesServer, total, rateLimitData, err := r.client.GetResourceServers(ctx, limit, page)
+	resourcesServer, total, rateLimitData, err := b.client.GetResourceServers(ctx, limit, page)
 	if err != nil {
 		return nil, "", outputAnnotations, err
 	}
@@ -59,11 +59,11 @@ func (r *scopeBuilder) List(ctx context.Context, _ *v2.ResourceId, pToken *pagin
 	return outputResources, nextToken, outputAnnotations, nil
 }
 
-func (r *scopeBuilder) Entitlements(_ context.Context, _ *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
+func (b *scopeBuilder) Entitlements(_ context.Context, _ *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
 	return nil, "", nil, nil
 }
 
-func (r *scopeBuilder) Grants(_ context.Context, _ *v2.Resource, _ *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
+func (b *scopeBuilder) Grants(_ context.Context, _ *v2.Resource, _ *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
 	return nil, "", nil, nil
 }
 

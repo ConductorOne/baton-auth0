@@ -9,8 +9,8 @@ import (
 	"github.com/conductorone/baton-sdk/pkg/annotations"
 	"github.com/conductorone/baton-sdk/pkg/connectorbuilder"
 	"github.com/conductorone/baton-sdk/pkg/pagination"
-	"github.com/conductorone/baton-sdk/pkg/types/entitlement"
-	"github.com/conductorone/baton-sdk/pkg/types/grant"
+	sdkEntitlement "github.com/conductorone/baton-sdk/pkg/types/entitlement"
+	sdkGrant "github.com/conductorone/baton-sdk/pkg/types/grant"
 	resourceSdk "github.com/conductorone/baton-sdk/pkg/types/resource"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"go.uber.org/zap"
@@ -29,7 +29,7 @@ type roleBuilder struct {
 	syncPermissions bool
 }
 
-func (o *roleBuilder) ResourceType(_ context.Context) *v2.ResourceType {
+func (b *roleBuilder) ResourceType(_ context.Context) *v2.ResourceType {
 	return roleResourceType
 }
 
@@ -54,7 +54,7 @@ func roleResource(role client.Role, parentResourceID *v2.ResourceId) (*v2.Resour
 
 // List returns all the roles from the database as resource objects.
 // Roles include a RoleTrait because they are the 'shape' of a standard role.
-func (o *roleBuilder) List(
+func (b *roleBuilder) List(
 	ctx context.Context,
 	parentResourceID *v2.ResourceId,
 	pToken *pagination.Token,
@@ -64,8 +64,8 @@ func (o *roleBuilder) List(
 	annotations.Annotations,
 	error,
 ) {
-	logger := ctxzap.Extract(ctx)
-	logger.Debug("Starting Roles List", zap.String("token", pToken.Token))
+	l := ctxzap.Extract(ctx)
+	l.Debug("Starting Roles List", zap.String("pagination_token", pToken.Token))
 
 	outputResources := make([]*v2.Resource, 0)
 	var outputAnnotations annotations.Annotations
@@ -75,7 +75,7 @@ func (o *roleBuilder) List(
 		return nil, "", nil, err
 	}
 
-	roles, total, rateLimitData, err := o.client.GetRoles(ctx, limit, page)
+	roles, total, rateLimitData, err := b.client.GetRoles(ctx, limit, page)
 	if err != nil {
 		return nil, "", outputAnnotations, err
 	}
@@ -98,8 +98,7 @@ func (o *roleBuilder) List(
 	return outputResources, nextToken, outputAnnotations, nil
 }
 
-// Entitlements always returns an empty slice for roles.
-func (o *roleBuilder) Entitlements(
+func (b *roleBuilder) Entitlements(
 	_ context.Context,
 	resource *v2.Resource,
 	_ *pagination.Token,
@@ -110,33 +109,33 @@ func (o *roleBuilder) Entitlements(
 	error,
 ) {
 	ents := []*v2.Entitlement{
-		entitlement.NewAssignmentEntitlement(
+		sdkEntitlement.NewAssignmentEntitlement(
 			resource,
 			roleEntitlementName,
-			entitlement.WithGrantableTo(userResourceType),
-			entitlement.WithDisplayName(
+			sdkEntitlement.WithGrantableTo(userResourceType),
+			sdkEntitlement.WithDisplayName(
 				fmt.Sprintf("%s %s", resource.DisplayName, roleEntitlementName),
 			),
-			entitlement.WithDescription(
+			sdkEntitlement.WithDescription(
 				fmt.Sprintf("Assigned %s role in Auth0", resource.DisplayName),
 			),
 		),
 	}
 
-	if o.syncPermissions {
+	if b.syncPermissions {
 		ents = append(
 			ents,
-			entitlement.NewPermissionEntitlement(
+			sdkEntitlement.NewPermissionEntitlement(
 				resource,
 				rolePermissionEntitlementName,
-				entitlement.WithGrantableTo(scopeResourceType),
-				entitlement.WithDisplayName(
+				sdkEntitlement.WithGrantableTo(scopeResourceType),
+				sdkEntitlement.WithDisplayName(
 					fmt.Sprintf("%s %s", resource.DisplayName, rolePermissionEntitlementName),
 				),
-				entitlement.WithDescription(
+				sdkEntitlement.WithDescription(
 					fmt.Sprintf("Has %s role permissions in Auth0", resource.DisplayName),
 				),
-				entitlement.WithAnnotation(&v2.EntitlementImmutable{}),
+				sdkEntitlement.WithAnnotation(&v2.EntitlementImmutable{}),
 			),
 		)
 	}
@@ -144,8 +143,7 @@ func (o *roleBuilder) Entitlements(
 	return ents, "", nil, nil
 }
 
-// Grants always returns an empty slice for roles since they don't have any entitlements.
-func (o *roleBuilder) Grants(
+func (b *roleBuilder) Grants(
 	ctx context.Context,
 	resource *v2.Resource,
 	token *pagination.Token,
@@ -166,7 +164,7 @@ func (o *roleBuilder) Grants(
 			ResourceTypeID: userResourceType.Id,
 		})
 
-		if o.syncPermissions {
+		if b.syncPermissions {
 			bag.Push(pagination.PageState{
 				ResourceTypeID: scopeResourceType.Id,
 			})
@@ -190,7 +188,7 @@ func (o *roleBuilder) Grants(
 			return nil, "", nil, err
 		}
 
-		users, total, rateLimitData, err := o.client.GetRoleUsers(
+		users, total, rateLimitData, err := b.client.GetRoleUsers(
 			ctx,
 			resource.Id.Resource,
 			limit,
@@ -211,7 +209,7 @@ func (o *roleBuilder) Grants(
 			if err != nil {
 				return nil, "", outputAnnotations, err
 			}
-			nextGrant := grant.NewGrant(
+			nextGrant := sdkGrant.NewGrant(
 				resource,
 				roleEntitlementName,
 				principalId,
@@ -228,7 +226,7 @@ func (o *roleBuilder) Grants(
 	case scopeResourceType.Id:
 		var outputAnnotations annotations.Annotations
 
-		permissions, rateLimitData, err := o.client.GetRolePermissions(
+		permissions, rateLimitData, err := b.client.GetRolePermissions(
 			ctx,
 			resource.Id.Resource,
 		)
@@ -250,7 +248,7 @@ func (o *roleBuilder) Grants(
 			if err != nil {
 				return nil, "", outputAnnotations, err
 			}
-			nextGrant := grant.NewGrant(
+			nextGrant := sdkGrant.NewGrant(
 				resource,
 				rolePermissionEntitlementName,
 				principalId,
@@ -270,7 +268,7 @@ func (o *roleBuilder) Grants(
 	}
 }
 
-func (r *roleBuilder) Grant(
+func (b *roleBuilder) Grant(
 	ctx context.Context,
 	principal *v2.Resource,
 	entitlement *v2.Entitlement,
@@ -291,7 +289,7 @@ func (r *roleBuilder) Grant(
 	}
 
 	var outputAnnotations annotations.Annotations
-	rateLimitData, err := r.client.AddUserToRole(ctx, roleId, userId)
+	rateLimitData, err := b.client.AddUserToRole(ctx, roleId, userId)
 	if err != nil {
 		return outputAnnotations, fmt.Errorf("baton-aouth0: failed to add user to role: %s", err.Error())
 	}
@@ -300,15 +298,15 @@ func (r *roleBuilder) Grant(
 	return outputAnnotations, nil
 }
 
-func (r *roleBuilder) Revoke(ctx context.Context, grant *v2.Grant) (annotations.Annotations, error) {
-	logger := ctxzap.Extract(ctx)
+func (b *roleBuilder) Revoke(ctx context.Context, grant *v2.Grant) (annotations.Annotations, error) {
+	l := ctxzap.Extract(ctx)
 	entitlement := grant.Entitlement
 	principal := grant.Principal
 	roleId := entitlement.Resource.Id.Resource
 	userId := principal.Id.Resource
 
 	if principal.Id.ResourceType != userResourceType.Id {
-		logger.Warn(
+		l.Warn(
 			"baton-auth0: only users can have role membership revoked",
 			zap.String("principal_type", principal.Id.ResourceType),
 			zap.String("principal_id", userId),
@@ -317,7 +315,7 @@ func (r *roleBuilder) Revoke(ctx context.Context, grant *v2.Grant) (annotations.
 	}
 
 	var outputAnnotations annotations.Annotations
-	rateLimitData, err := r.client.RemoveUserFromRole(ctx, roleId, userId)
+	rateLimitData, err := b.client.RemoveUserFromRole(ctx, roleId, userId)
 	if err != nil {
 		return outputAnnotations, fmt.Errorf("baton-auth0: failed to revoke membership to role: %s", err.Error())
 	}
