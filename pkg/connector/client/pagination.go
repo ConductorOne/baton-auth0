@@ -169,13 +169,15 @@ func GetNextUsersToken(
 	nextPage := page + 1
 	nextOffset := nextPage * limit
 
-	if nextOffset >= total || nextPage == Auth0UserSearchMaxResults/limit {
-		if total <= limit || newestCreatedAt == nil {
+	if nextOffset >= Auth0UserSearchMaxResults {
+		if newestCreatedAt == nil {
 			return "", nil
 		}
 
 		nextPage = 0
 		since = newestCreatedAt.UTC().Format(time.RFC3339Nano)
+	} else if nextOffset >= total {
+		return "", nil
 	}
 
 	bytes, err := json.Marshal(UserPagination{

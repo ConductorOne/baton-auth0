@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/conductorone/baton-auth0/pkg/connector/client"
 	"github.com/conductorone/baton-auth0/test"
@@ -60,12 +61,15 @@ func TestUsersListMaxResultsCap(t *testing.T) {
 		require.Nil(t, err)
 		require.NotEmpty(t, nextToken, "expected a next token before reaching the 1000 cap")
 
-		// Page 9, limit 100: (9+1)*100 = 1000 >= 1000, no next token expected.
-		page9Bytes, _ := json.Marshal(client.UserPagination{Page: 9})
+		// Page 9, limit 100: (9+1)*100 = 1000 >= Auth0UserSearchMaxResults, window shift expected.
+		page9Bytes, _ := json.Marshal(client.UserPagination{Page: 9, Since: "*", Until: time.Now().UTC().Format(time.RFC3339Nano)})
 		pToken9 := &pagination.Token{Token: string(page9Bytes), Size: 100}
 		_, nextToken9, _, err := ub.List(ctx, nil, pToken9)
 		require.Nil(t, err)
-		require.Empty(t, nextToken9, "expected no next token at the 1000 user cap boundary")
+		var windowShiftToken client.UserPagination
+		require.Nil(t, json.Unmarshal([]byte(nextToken9), &windowShiftToken))
+		require.Equal(t, 0, windowShiftToken.Page, "expected window shift to reset page to 0")
+		require.NotEmpty(t, windowShiftToken.Since, "expected window shift to set a since date")
 	})
 }
 
