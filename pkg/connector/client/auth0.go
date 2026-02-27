@@ -148,6 +148,7 @@ func (c *Client) GetUsers(
 		WithQueryParam("include_totals", "true"),
 		WithQueryParam("page", strconv.Itoa(page)),
 		WithQueryParam("per_page", strconv.Itoa(limit)),
+		WithQueryParam("sort", "created_at:1"),
 		WithQueryParam("q", fmt.Sprintf("created_at:[%s TO %s]", since, until)),
 	)
 	if err != nil {
