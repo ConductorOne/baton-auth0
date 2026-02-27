@@ -196,7 +196,7 @@ func (b *organizationBuilder) Grant(
 	var outputAnnotations annotations.Annotations
 	rateLimitData, err := b.client.AddUserToOrganization(ctx, organizationId, userId)
 	if err != nil {
-		return outputAnnotations, fmt.Errorf("baton-aouth0: failed to add user to organization: %s", err.Error())
+		return outputAnnotations, fmt.Errorf("baton-auth0: failed to add user to organization: %w", err)
 	}
 	outputAnnotations.WithRateLimiting(rateLimitData)
 
