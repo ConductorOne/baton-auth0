@@ -70,7 +70,7 @@ func (o *userBuilder) List(
 	outputResources := make([]*v2.Resource, 0)
 	var outputAnnotations annotations.Annotations
 
-	page, limit, _, since, until, err := client.ParsePaginationToken(pToken)
+	page, limit, since, until, newestUserCreationDate, err := client.ParseUserPaginationToken(pToken)
 	if err != nil {
 		return nil, "", nil, err
 	}
@@ -86,9 +86,13 @@ func (o *userBuilder) List(
 	}
 
 	var newestCreatedAt time.Time
+	if newestUserCreationDate != nil {
+		newestCreatedAt = *newestUserCreationDate
+	}
+
 	for _, user := range users {
-		if user.CreatedAt.After(newestCreatedAt) {
-			newestCreatedAt = user.CreatedAt
+		if user.CreatedAt.UTC().After(newestCreatedAt) {
+			newestCreatedAt = user.CreatedAt.UTC()
 		}
 
 		userResource0, err := userResource(user, parentResourceID)
@@ -102,14 +106,15 @@ func (o *userBuilder) List(
 	// Requesting beyond this limit returns a 400 error.
 	// See https://auth0.com/docs/manage-users/user-search/view-search-results-by-page#limitation.
 	if total > client.Auth0UserSearchMaxResults {
-		logger.Warn(
+		logger.Debug(
 			"Auth0 user search API limits results. Some users may not be synced.",
 			zap.Int("total_users", total),
 			zap.Int("synced_limit", client.Auth0UserSearchMaxResults),
 		)
 		total = client.Auth0UserSearchMaxResults
 	}
-	nextToken := client.GetNextToken(page, limit, total, &newestCreatedAt)
+
+	nextToken := client.GetNextUsersToken(page, limit, total, since, &newestCreatedAt)
 
 	return outputResources, nextToken, outputAnnotations, nil
 }

@@ -17,8 +17,57 @@ const Auth0UserSearchMaxResults = 1000
 type Pagination struct {
 	PagingRequestId string `json:"pagingRequestId"`
 	Page            int    `json:"page"`
-	Since           string `json:"since,omitempty"`
-	Until           string `json:"until,omitempty"`
+}
+
+type UserPagination struct {
+	Page                int        `json:"page"`
+	Since               string     `json:"since,omitempty"`
+	Until               string     `json:"until,omitempty"`
+	NewestUserCreatedAt *time.Time `json:"newestUserCreatedAt,omitempty"`
+}
+
+// ParseUserPaginationToken - takes as pagination token and returns page, limit,
+// also it includes since and until dates to search users, and the date the newest user was created.
+func ParseUserPaginationToken(pToken *pagination.Token) (
+	int,
+	int,
+	string,
+	string,
+	*time.Time,
+	error,
+) {
+	var (
+		limit = PageSizeDefault
+		page  = 0
+		since = "*"
+
+		// Until never gets updated. Always should use the last possible date.
+		until = time.Now().UTC().Format(time.RFC3339Nano)
+	)
+	var newestUserCreationDate *time.Time
+
+	if pToken == nil {
+		return page, limit, since, until, newestUserCreationDate, nil
+	}
+
+	if pToken.Size > 0 {
+		limit = pToken.Size
+	}
+
+	if pToken.Token == "" {
+		return page, limit, since, until, newestUserCreationDate, nil
+	}
+
+	var parsed UserPagination
+	err := json.Unmarshal([]byte(pToken.Token), &parsed)
+	if err != nil {
+		return 0, 0, "", "", nil, err
+	}
+
+	page = parsed.Page
+	since = parsed.Since
+	newestUserCreationDate = parsed.NewestUserCreatedAt
+	return page, limit, since, until, newestUserCreationDate, nil
 }
 
 // ParsePaginationToken - takes as pagination token and returns page, limit,
@@ -27,20 +76,16 @@ func ParsePaginationToken(pToken *pagination.Token) (
 	int,
 	int,
 	string,
-	string,
-	string,
 	error,
 ) {
 	var (
 		limit           = PageSizeDefault
 		page            = 0
 		pagingRequestId = ""
-		since           = "*"
-		until           = time.Now().UTC().Format(time.RFC3339Nano)
 	)
 
 	if pToken == nil {
-		return page, limit, pagingRequestId, since, until, nil
+		return page, limit, pagingRequestId, nil
 	}
 
 	if pToken.Size > 0 {
@@ -48,20 +93,18 @@ func ParsePaginationToken(pToken *pagination.Token) (
 	}
 
 	if pToken.Token == "" {
-		return page, limit, pagingRequestId, since, until, nil
+		return page, limit, pagingRequestId, nil
 	}
 
 	var parsed Pagination
 	err := json.Unmarshal([]byte(pToken.Token), &parsed)
 	if err != nil {
-		return 0, 0, "", "", "", err
+		return 0, 0, "", err
 	}
 
 	page = parsed.Page
 	pagingRequestId = parsed.PagingRequestId
-	since = parsed.Since
-	until = parsed.Until
-	return page, limit, pagingRequestId, since, until, nil
+	return page, limit, pagingRequestId, nil
 }
 
 func ParsePaginationTokenString(pToken string) (
@@ -98,7 +141,6 @@ func GetNextToken(
 	page int,
 	limit int,
 	total int,
-	newestCreatedAt *time.Time,
 ) string {
 	nextPage := page + 1
 	nextOffset := nextPage * limit
@@ -107,12 +149,40 @@ func GetNextToken(
 		return ""
 	}
 
-	bytes, err := json.Marshal(
-		Pagination{
-			Page:  nextPage,
-			Since: newestCreatedAt.UTC().Format(time.RFC3339Nano),
-		},
-	)
+	bytes, err := json.Marshal(Pagination{
+		Page: nextPage,
+	})
+	if err != nil {
+		return ""
+	}
+
+	return string(bytes)
+}
+
+func GetNextUsersToken(
+	page int,
+	limit int,
+	total int,
+	since string,
+	newestCreatedAt *time.Time,
+) string {
+	nextPage := page + 1
+	nextOffset := nextPage * limit
+
+	if nextOffset >= total || nextPage == 10 {
+		if total <= limit || newestCreatedAt == nil {
+			return ""
+		}
+
+		nextPage = 0
+		since = newestCreatedAt.UTC().Format(time.RFC3339Nano)
+	}
+
+	bytes, err := json.Marshal(UserPagination{
+		Page:                nextPage,
+		Since:               since,
+		NewestUserCreatedAt: newestCreatedAt,
+	})
 	if err != nil {
 		return ""
 	}

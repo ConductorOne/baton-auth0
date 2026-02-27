@@ -70,7 +70,7 @@ func (o *organizationBuilder) List(
 	outputResources := make([]*v2.Resource, 0)
 	var outputAnnotations annotations.Annotations
 
-	page, limit, _, _, _, err := client.ParsePaginationToken(pToken)
+	page, limit, _, err := client.ParsePaginationToken(pToken)
 	if err != nil {
 		return nil, "", nil, err
 	}
@@ -93,7 +93,7 @@ func (o *organizationBuilder) List(
 		outputResources = append(outputResources, organizationResource0)
 	}
 
-	nextToken := client.GetNextToken(page, limit, total, nil)
+	nextToken := client.GetNextToken(page, limit, total)
 
 	return outputResources, nextToken, outputAnnotations, nil
 }
@@ -134,7 +134,7 @@ func (o *organizationBuilder) Grants(
 	error,
 ) {
 	var outputAnnotations annotations.Annotations
-	page, limit, _, _, _, err := client.ParsePaginationToken(token)
+	page, limit, _, err := client.ParsePaginationToken(token)
 	if err != nil {
 		return nil, "", nil, err
 	}
@@ -168,7 +168,7 @@ func (o *organizationBuilder) Grants(
 		grants = append(grants, nextGrant)
 	}
 
-	nextToken := client.GetNextToken(page, limit, total, nil)
+	nextToken := client.GetNextToken(page, limit, total)
 
 	return grants, nextToken, outputAnnotations, nil
 }

@@ -28,7 +28,7 @@ func (r *resourceServerBuilder) ResourceType(_ context.Context) *v2.ResourceType
 }
 
 func (r *resourceServerBuilder) List(ctx context.Context, _ *v2.ResourceId, pToken *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
-	page, limit, _, _, _, err := client.ParsePaginationToken(pToken)
+	page, limit, _, err := client.ParsePaginationToken(pToken)
 	if err != nil {
 		return nil, "", nil, err
 	}
@@ -53,7 +53,7 @@ func (r *resourceServerBuilder) List(ctx context.Context, _ *v2.ResourceId, pTok
 		outputResources = append(outputResources, organizationResource0)
 	}
 
-	nextToken := client.GetNextToken(page, limit, total, nil)
+	nextToken := client.GetNextToken(page, limit, total)
 
 	return outputResources, nextToken, outputAnnotations, nil
 }

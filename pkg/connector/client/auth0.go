@@ -148,7 +148,7 @@ func (c *Client) GetUsers(
 		WithQueryParam("include_totals", "true"),
 		WithQueryParam("page", strconv.Itoa(page)),
 		WithQueryParam("per_page", strconv.Itoa(limit)),
-		WithQueryParam("q=created_at", fmt.Sprintf("[%s TO %s]", since, until)),
+		WithQueryParam("q", fmt.Sprintf("created_at:[%s TO %s]", since, until)),
 	)
 	if err != nil {
 		return nil, 0, rateLimitData, err
@@ -172,6 +172,7 @@ func (c *Client) GetRoles(
 		ctx,
 		apiPathGetRoles,
 		&target,
+		WithQueryParam("include_totals", "true"),
 		WithQueryParam("page", strconv.Itoa(page)),
 		WithQueryParam("per_page", strconv.Itoa(limit)),
 	)
@@ -197,6 +198,7 @@ func (c *Client) GetOrganizations(
 		ctx,
 		apiPathGetOrganizations,
 		&target,
+		WithQueryParam("include_totals", "true"),
 		WithQueryParam("page", strconv.Itoa(page)),
 		WithQueryParam("per_page", strconv.Itoa(limit)),
 	)
@@ -223,6 +225,7 @@ func (c *Client) GetOrganizationMembers(
 		ctx,
 		fmt.Sprintf(apiPathOrganizationMembers, organizationId),
 		&target,
+		WithQueryParam("include_totals", "true"),
 		WithQueryParam("page", strconv.Itoa(page)),
 		WithQueryParam("per_page", strconv.Itoa(limit)),
 	)
@@ -249,6 +252,7 @@ func (c *Client) GetRoleUsers(
 		ctx,
 		fmt.Sprintf(apiPathUsersForRole, roleId),
 		&target,
+		WithQueryParam("include_totals", "true"),
 		WithQueryParam("page", strconv.Itoa(page)),
 		WithQueryParam("per_page", strconv.Itoa(limit)),
 	)
@@ -373,6 +377,7 @@ func (c *Client) GetResourceServers(
 		ctx,
 		apiPathGetResourceServers,
 		&target,
+		WithQueryParam("include_totals", "true"),
 		WithQueryParam("page", strconv.Itoa(page)),
 		WithQueryParam("per_page", strconv.Itoa(limit)),
 	)

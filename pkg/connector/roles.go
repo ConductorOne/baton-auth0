@@ -70,7 +70,7 @@ func (o *roleBuilder) List(
 	outputResources := make([]*v2.Resource, 0)
 	var outputAnnotations annotations.Annotations
 
-	page, limit, _, _, _, err := client.ParsePaginationToken(pToken)
+	page, limit, _, err := client.ParsePaginationToken(pToken)
 	if err != nil {
 		return nil, "", nil, err
 	}
@@ -93,7 +93,7 @@ func (o *roleBuilder) List(
 		outputResources = append(outputResources, roleResource0)
 	}
 
-	nextToken := client.GetNextToken(page, limit, total, nil)
+	nextToken := client.GetNextToken(page, limit, total)
 
 	return outputResources, nextToken, outputAnnotations, nil
 }
@@ -219,7 +219,7 @@ func (o *roleBuilder) Grants(
 			grants = append(grants, nextGrant)
 		}
 
-		nextToken, err := bag.NextToken(client.GetNextToken(page, limit, total, nil))
+		nextToken, err := bag.NextToken(client.GetNextToken(page, limit, total))
 		if err != nil {
 			return nil, "", nil, err
 		}
