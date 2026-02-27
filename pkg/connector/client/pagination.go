@@ -165,13 +165,13 @@ func GetNextUsersToken(
 	total int,
 	since string,
 	newestCreatedAt *time.Time,
-) string {
+) (string, error) {
 	nextPage := page + 1
 	nextOffset := nextPage * limit
 
-	if nextOffset >= total || nextPage == 10 {
+	if nextOffset >= total || nextPage == Auth0UserSearchMaxResults/limit {
 		if total <= limit || newestCreatedAt == nil {
-			return ""
+			return "", nil
 		}
 
 		nextPage = 0
@@ -184,8 +184,8 @@ func GetNextUsersToken(
 		NewestUserCreatedAt: newestCreatedAt,
 	})
 	if err != nil {
-		return ""
+		return "", err
 	}
 
-	return string(bytes)
+	return string(bytes), nil
 }

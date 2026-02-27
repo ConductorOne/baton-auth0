@@ -114,7 +114,10 @@ func (b *userBuilder) List(
 		total = client.Auth0UserSearchMaxResults
 	}
 
-	nextToken := client.GetNextUsersToken(page, limit, total, since, &newestCreatedAt)
+	nextToken, err := client.GetNextUsersToken(page, limit, total, since, &newestCreatedAt)
+	if err != nil {
+		return nil, "", nil, err
+	}
 
 	return outputResources, nextToken, outputAnnotations, nil
 }

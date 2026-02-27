@@ -61,7 +61,7 @@ func TestUsersListMaxResultsCap(t *testing.T) {
 		require.NotEmpty(t, nextToken, "expected a next token before reaching the 1000 cap")
 
 		// Page 9, limit 100: (9+1)*100 = 1000 >= 1000, no next token expected.
-		page9Bytes, _ := json.Marshal(client.Pagination{Page: 9})
+		page9Bytes, _ := json.Marshal(client.UserPagination{Page: 9})
 		pToken9 := &pagination.Token{Token: string(page9Bytes), Size: 100}
 		_, nextToken9, _, err := ub.List(ctx, nil, pToken9)
 		require.Nil(t, err)
@@ -105,7 +105,7 @@ func TestUsersList(t *testing.T) {
 				break
 			}
 
-			var token client.Pagination
+			var token client.UserPagination
 			err = json.Unmarshal([]byte(nextToken), &token)
 			require.Nil(t, err)
 			require.Equal(t, token.Page, i+1)
