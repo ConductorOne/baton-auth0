@@ -44,7 +44,7 @@ func (d *Connector) Asset(_ context.Context, _ *v2.AssetRef) (string, io.ReadClo
 func (d *Connector) Metadata(_ context.Context) (*v2.ConnectorMetadata, error) {
 	return &v2.ConnectorMetadata{
 		DisplayName: "Auth0 Connector",
-		Description: "The template implementation of a baton connector",
+		Description: "Connector for syncing identity and access data from Auth0",
 	}, nil
 }
 

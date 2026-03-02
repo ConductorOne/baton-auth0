@@ -329,7 +329,7 @@ func (b *roleBuilder) Revoke(ctx context.Context, grant *v2.Grant) (annotations.
 		if rateLimitData != nil {
 			outputAnnotations.WithRateLimiting(rateLimitData)
 		}
-		return outputAnnotations, fmt.Errorf("baton-auth0: failed to revoke membership to role: %s", err.Error())
+		return outputAnnotations, fmt.Errorf("baton-auth0: failed to revoke membership to role: %w", err)
 	}
 	outputAnnotations.WithRateLimiting(rateLimitData)
 
