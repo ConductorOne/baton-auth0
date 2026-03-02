@@ -35,6 +35,9 @@ func (b *scopeBuilder) List(ctx context.Context, _ *v2.ResourceId, pToken *pagin
 
 	resourcesServer, total, rateLimitData, err := b.client.GetResourceServers(ctx, limit, page)
 	if err != nil {
+		if rateLimitData != nil {
+			outputAnnotations.WithRateLimiting(rateLimitData)
+		}
 		return nil, "", outputAnnotations, err
 	}
 	outputAnnotations.WithRateLimiting(rateLimitData)

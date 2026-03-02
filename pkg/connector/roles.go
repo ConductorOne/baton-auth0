@@ -64,9 +64,6 @@ func (b *roleBuilder) List(
 	annotations.Annotations,
 	error,
 ) {
-	l := ctxzap.Extract(ctx)
-	l.Debug("Starting Roles List", zap.String("pagination_token", pToken.Token))
-
 	outputResources := make([]*v2.Resource, 0)
 	var outputAnnotations annotations.Annotations
 
@@ -77,6 +74,9 @@ func (b *roleBuilder) List(
 
 	roles, total, rateLimitData, err := b.client.GetRoles(ctx, limit, page)
 	if err != nil {
+		if rateLimitData != nil {
+			outputAnnotations.WithRateLimiting(rateLimitData)
+		}
 		return nil, "", outputAnnotations, err
 	}
 	outputAnnotations.WithRateLimiting(rateLimitData)
@@ -195,6 +195,9 @@ func (b *roleBuilder) Grants(
 			page,
 		)
 		if err != nil {
+			if rateLimitData != nil {
+				outputAnnotations.WithRateLimiting(rateLimitData)
+			}
 			return nil, "", outputAnnotations, err
 		}
 		outputAnnotations.WithRateLimiting(rateLimitData)
@@ -231,6 +234,9 @@ func (b *roleBuilder) Grants(
 			resource.Id.Resource,
 		)
 		if err != nil {
+			if rateLimitData != nil {
+				outputAnnotations.WithRateLimiting(rateLimitData)
+			}
 			return nil, "", outputAnnotations, err
 		}
 		outputAnnotations.WithRateLimiting(rateLimitData)
@@ -276,11 +282,11 @@ func (b *roleBuilder) Grant(
 	annotations.Annotations,
 	error,
 ) {
-	logger := ctxzap.Extract(ctx)
+	l := ctxzap.Extract(ctx)
 	userId := principal.Id.Resource
 	roleId := entitlement.Resource.Id.Resource
 	if principal.Id.ResourceType != userResourceType.Id {
-		logger.Warn(
+		l.Debug(
 			"baton-auth0: only users can be granted role membership",
 			zap.String("principal_type", principal.Id.ResourceType),
 			zap.String("principal_id", principal.Id.Resource),
@@ -291,7 +297,10 @@ func (b *roleBuilder) Grant(
 	var outputAnnotations annotations.Annotations
 	rateLimitData, err := b.client.AddUserToRole(ctx, roleId, userId)
 	if err != nil {
-		return outputAnnotations, fmt.Errorf("baton-aouth0: failed to add user to role: %s", err.Error())
+		if rateLimitData != nil {
+			outputAnnotations.WithRateLimiting(rateLimitData)
+		}
+		return outputAnnotations, fmt.Errorf("baton-auth0: failed to add user to role: %w", err)
 	}
 	outputAnnotations.WithRateLimiting(rateLimitData)
 
@@ -317,6 +326,9 @@ func (b *roleBuilder) Revoke(ctx context.Context, grant *v2.Grant) (annotations.
 	var outputAnnotations annotations.Annotations
 	rateLimitData, err := b.client.RemoveUserFromRole(ctx, roleId, userId)
 	if err != nil {
+		if rateLimitData != nil {
+			outputAnnotations.WithRateLimiting(rateLimitData)
+		}
 		return outputAnnotations, fmt.Errorf("baton-auth0: failed to revoke membership to role: %s", err.Error())
 	}
 	outputAnnotations.WithRateLimiting(rateLimitData)

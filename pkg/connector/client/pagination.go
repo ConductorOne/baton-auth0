@@ -65,8 +65,11 @@ func ParseUserPaginationToken(pToken *pagination.Token) (
 	}
 
 	page = parsed.Page
-	since = parsed.Since
 	newestUserCreationDate = parsed.NewestUserCreatedAt
+	if parsed.Since != "" {
+		since = parsed.Since
+	}
+
 	return page, limit, since, until, newestUserCreationDate, nil
 }
 
@@ -174,8 +177,14 @@ func GetNextUsersToken(
 			return "", nil
 		}
 
+		nextSince := newestCreatedAt.UTC().Format(time.RFC3339Nano)
+		if nextSince == since {
+			// No forward progress — stop to avoid infinite loop
+			return "", nil
+		}
+		
 		nextPage = 0
-		since = newestCreatedAt.UTC().Format(time.RFC3339Nano)
+		since = nextSince
 	} else if nextOffset >= total {
 		return "", nil
 	}

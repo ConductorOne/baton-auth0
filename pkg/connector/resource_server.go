@@ -36,6 +36,9 @@ func (b *resourceServerBuilder) List(ctx context.Context, _ *v2.ResourceId, pTok
 
 	resourcesServer, total, rateLimitData, err := b.client.GetResourceServers(ctx, limit, page)
 	if err != nil {
+		if rateLimitData != nil {
+			outputAnnotations.WithRateLimiting(rateLimitData)
+		}
 		return nil, "", outputAnnotations, err
 	}
 	outputAnnotations.WithRateLimiting(rateLimitData)
@@ -77,7 +80,10 @@ func (b *resourceServerBuilder) Grants(ctx context.Context, resource *v2.Resourc
 	var outputAnnotations annotations.Annotations
 	server, rateLimitData, err := b.client.GetResourceServer(ctx, resource.Id.Resource)
 	if err != nil {
-		return nil, "", nil, err
+		if rateLimitData != nil {
+			outputAnnotations.WithRateLimiting(rateLimitData)
+		}
+		return nil, "", outputAnnotations, err
 	}
 	outputAnnotations.WithRateLimiting(rateLimitData)
 
@@ -90,7 +96,7 @@ func (b *resourceServerBuilder) Grants(ctx context.Context, resource *v2.Resourc
 		grantsResponse = append(grantsResponse, newGrant)
 	}
 
-	return grantsResponse, "", nil, nil
+	return grantsResponse, "", outputAnnotations, nil
 }
 
 func resourceServerResource(resourceServer *client.ResourceServer) (*v2.Resource, error) {

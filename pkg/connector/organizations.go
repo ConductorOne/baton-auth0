@@ -64,9 +64,6 @@ func (b *organizationBuilder) List(
 	annotations.Annotations,
 	error,
 ) {
-	l := ctxzap.Extract(ctx)
-	l.Debug("Starting Organizations List", zap.String("pagination_token", pToken.Token))
-
 	outputResources := make([]*v2.Resource, 0)
 	var outputAnnotations annotations.Annotations
 
@@ -77,6 +74,9 @@ func (b *organizationBuilder) List(
 
 	organizations, total, rateLimitData, err := b.client.GetOrganizations(ctx, limit, page)
 	if err != nil {
+		if rateLimitData != nil {
+			outputAnnotations.WithRateLimiting(rateLimitData)
+		}
 		return nil, "", outputAnnotations, err
 	}
 	outputAnnotations.WithRateLimiting(rateLimitData)
@@ -94,7 +94,6 @@ func (b *organizationBuilder) List(
 	}
 
 	nextToken := client.GetNextToken(page, limit, total)
-
 	return outputResources, nextToken, outputAnnotations, nil
 }
 
@@ -146,6 +145,9 @@ func (b *organizationBuilder) Grants(
 		page,
 	)
 	if err != nil {
+		if rateLimitData != nil {
+			outputAnnotations.WithRateLimiting(rateLimitData)
+		}
 		return nil, "", outputAnnotations, err
 	}
 	outputAnnotations.WithRateLimiting(rateLimitData)
@@ -169,7 +171,6 @@ func (b *organizationBuilder) Grants(
 	}
 
 	nextToken := client.GetNextToken(page, limit, total)
-
 	return grants, nextToken, outputAnnotations, nil
 }
 
@@ -196,6 +197,9 @@ func (b *organizationBuilder) Grant(
 	var outputAnnotations annotations.Annotations
 	rateLimitData, err := b.client.AddUserToOrganization(ctx, organizationId, userId)
 	if err != nil {
+		if rateLimitData != nil {
+			outputAnnotations.WithRateLimiting(rateLimitData)
+		}
 		return outputAnnotations, fmt.Errorf("baton-aouth0: failed to add user to organization: %s", err.Error())
 	}
 	outputAnnotations.WithRateLimiting(rateLimitData)
@@ -222,7 +226,10 @@ func (b *organizationBuilder) Revoke(ctx context.Context, grant *v2.Grant) (anno
 	var outputAnnotations annotations.Annotations
 	rateLimitData, err := b.client.RemoveUserFromOrganization(ctx, organizationId, userId)
 	if err != nil {
-		return outputAnnotations, fmt.Errorf("baton-auth0: failed to revoke membership to organization: %s", err.Error())
+		if rateLimitData != nil {
+			outputAnnotations.WithRateLimiting(rateLimitData)
+		}
+		return outputAnnotations, fmt.Errorf("baton-auth0: failed to revoke membership to organization: %w", err)
 	}
 	outputAnnotations.WithRateLimiting(rateLimitData)
 

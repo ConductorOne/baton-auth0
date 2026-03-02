@@ -65,7 +65,6 @@ func (b *userBuilder) List(
 	error,
 ) {
 	l := ctxzap.Extract(ctx)
-	l.Debug("Starting Users List", zap.String("pagination_token", pToken.Token))
 
 	outputResources := make([]*v2.Resource, 0)
 	var outputAnnotations annotations.Annotations
@@ -77,6 +76,9 @@ func (b *userBuilder) List(
 
 	users, total, rateLimitData, err := b.client.GetUsers(ctx, limit, page, since, until)
 	if err != nil {
+		if rateLimitData != nil {
+			outputAnnotations.WithRateLimiting(rateLimitData)
+		}
 		return nil, "", outputAnnotations, err
 	}
 	outputAnnotations.WithRateLimiting(rateLimitData)
