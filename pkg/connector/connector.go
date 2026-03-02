@@ -4,7 +4,7 @@ import (
 	"context"
 	"io"
 
-	"github.com/conductorone/baton-auth0/pkg/connector/client"
+	"github.com/conductorone/baton-auth0/pkg/client"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
 	"github.com/conductorone/baton-sdk/pkg/connectorbuilder"

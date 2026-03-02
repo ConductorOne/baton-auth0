@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/conductorone/baton-auth0/pkg/connector/client"
+	client2 "github.com/conductorone/baton-auth0/pkg/client"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
 	"github.com/conductorone/baton-sdk/pkg/connectorbuilder"
@@ -25,7 +25,7 @@ const roleEntitlementName = "assigned"
 const rolePermissionEntitlementName = "has_permission"
 
 type roleBuilder struct {
-	client          *client.Client
+	client          *client2.Client
 	syncPermissions bool
 }
 
@@ -34,7 +34,7 @@ func (b *roleBuilder) ResourceType(_ context.Context) *v2.ResourceType {
 }
 
 // Create a new connector resource for an Auth0 role.
-func roleResource(role client.Role, parentResourceID *v2.ResourceId) (*v2.Resource, error) {
+func roleResource(role client2.Role, parentResourceID *v2.ResourceId) (*v2.Resource, error) {
 	return resourceSdk.NewRoleResource(
 		role.Name,
 		roleResourceType,
@@ -67,7 +67,7 @@ func (b *roleBuilder) List(
 	outputResources := make([]*v2.Resource, 0)
 	var outputAnnotations annotations.Annotations
 
-	page, limit, _, err := client.ParsePaginationToken(pToken)
+	page, limit, _, err := client2.ParsePaginationToken(pToken)
 	if err != nil {
 		return nil, "", nil, err
 	}
@@ -93,7 +93,7 @@ func (b *roleBuilder) List(
 		outputResources = append(outputResources, roleResource0)
 	}
 
-	nextToken := client.GetNextToken(page, limit, total)
+	nextToken := client2.GetNextToken(page, limit, total)
 
 	return outputResources, nextToken, outputAnnotations, nil
 }
@@ -183,7 +183,7 @@ func (b *roleBuilder) Grants(
 	switch state.ResourceTypeID {
 	case userResourceType.Id:
 		var outputAnnotations annotations.Annotations
-		page, limit, _, err := client.ParsePaginationTokenString(state.Token)
+		page, limit, _, err := client2.ParsePaginationTokenString(state.Token)
 		if err != nil {
 			return nil, "", nil, err
 		}
@@ -220,7 +220,7 @@ func (b *roleBuilder) Grants(
 			grants = append(grants, nextGrant)
 		}
 
-		nextToken, err := bag.NextToken(client.GetNextToken(page, limit, total))
+		nextToken, err := bag.NextToken(client2.GetNextToken(page, limit, total))
 		if err != nil {
 			return nil, "", nil, err
 		}
@@ -336,7 +336,7 @@ func (b *roleBuilder) Revoke(ctx context.Context, grant *v2.Grant) (annotations.
 	return outputAnnotations, nil
 }
 
-func newRoleBuilder(client *client.Client, syncPermissions bool) *roleBuilder {
+func newRoleBuilder(client *client2.Client, syncPermissions bool) *roleBuilder {
 	return &roleBuilder{
 		client:          client,
 		syncPermissions: syncPermissions,

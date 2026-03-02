@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/conductorone/baton-auth0/pkg/connector/client"
+	client2 "github.com/conductorone/baton-auth0/pkg/client"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
 	"github.com/conductorone/baton-sdk/pkg/connectorbuilder"
@@ -17,7 +17,7 @@ import (
 var _ connectorbuilder.ResourceSyncer = (*userBuilder)(nil)
 
 type userBuilder struct {
-	client *client.Client
+	client *client2.Client
 }
 
 func (b *userBuilder) ResourceType(_ context.Context) *v2.ResourceType {
@@ -25,7 +25,7 @@ func (b *userBuilder) ResourceType(_ context.Context) *v2.ResourceType {
 }
 
 // Create a new connector resource for an Auth0 user.
-func userResource(user client.User, parentResourceID *v2.ResourceId) (*v2.Resource, error) {
+func userResource(user client2.User, parentResourceID *v2.ResourceId) (*v2.Resource, error) {
 	firstName, lastName := resourceSdk.SplitFullName(user.Name)
 
 	profile := map[string]interface{}{
@@ -69,7 +69,7 @@ func (b *userBuilder) List(
 	outputResources := make([]*v2.Resource, 0)
 	var outputAnnotations annotations.Annotations
 
-	page, limit, since, until, newestUserCreationDate, err := client.ParseUserPaginationToken(pToken)
+	page, limit, since, until, newestUserCreationDate, err := client2.ParseUserPaginationToken(pToken)
 	if err != nil {
 		return nil, "", nil, err
 	}
@@ -107,16 +107,16 @@ func (b *userBuilder) List(
 	// Auth0's User Search API enforces a hard cap of 1,000 results, even when paginating.
 	// Requesting beyond this limit returns a 400 error.
 	// See https://auth0.com/docs/manage-users/user-search/view-search-results-by-page#limitation.
-	if total > client.Auth0UserSearchMaxResults {
+	if total > client2.Auth0UserSearchMaxResults {
 		l.Debug(
 			"Auth0 user search exceeds 1000-result API limit; using date-range windowing to fetch remaining users.",
 			zap.Int("total_users", total),
-			zap.Int("api_limit", client.Auth0UserSearchMaxResults),
+			zap.Int("api_limit", client2.Auth0UserSearchMaxResults),
 		)
-		total = client.Auth0UserSearchMaxResults
+		total = client2.Auth0UserSearchMaxResults
 	}
 
-	nextToken, err := client.GetNextUsersToken(page, limit, total, since, &newestCreatedAt)
+	nextToken, err := client2.GetNextUsersToken(page, limit, total, since, &newestCreatedAt)
 	if err != nil {
 		return nil, "", nil, err
 	}
@@ -152,6 +152,6 @@ func (b *userBuilder) Grants(
 	return nil, "", nil, nil
 }
 
-func newUserBuilder(client *client.Client) *userBuilder {
+func newUserBuilder(client *client2.Client) *userBuilder {
 	return &userBuilder{client: client}
 }

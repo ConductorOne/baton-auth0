@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/conductorone/baton-auth0/pkg/connector/client"
+	client2 "github.com/conductorone/baton-auth0/pkg/client"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
 	"github.com/conductorone/baton-sdk/pkg/connectorbuilder"
@@ -24,7 +24,7 @@ var (
 const organizationEntitlementName = "member"
 
 type organizationBuilder struct {
-	client *client.Client
+	client *client2.Client
 }
 
 func (b *organizationBuilder) ResourceType(_ context.Context) *v2.ResourceType {
@@ -33,7 +33,7 @@ func (b *organizationBuilder) ResourceType(_ context.Context) *v2.ResourceType {
 
 // Create a new connector resource for an Auth0 organization.
 func organizationResource(
-	organization client.Organization,
+	organization client2.Organization,
 	parentResourceID *v2.ResourceId,
 ) (*v2.Resource, error) {
 	return resourceSdk.NewGroupResource(
@@ -67,7 +67,7 @@ func (b *organizationBuilder) List(
 	outputResources := make([]*v2.Resource, 0)
 	var outputAnnotations annotations.Annotations
 
-	page, limit, _, err := client.ParsePaginationToken(pToken)
+	page, limit, _, err := client2.ParsePaginationToken(pToken)
 	if err != nil {
 		return nil, "", nil, err
 	}
@@ -93,7 +93,7 @@ func (b *organizationBuilder) List(
 		outputResources = append(outputResources, organizationResource0)
 	}
 
-	nextToken := client.GetNextToken(page, limit, total)
+	nextToken := client2.GetNextToken(page, limit, total)
 	return outputResources, nextToken, outputAnnotations, nil
 }
 
@@ -133,7 +133,7 @@ func (b *organizationBuilder) Grants(
 	error,
 ) {
 	var outputAnnotations annotations.Annotations
-	page, limit, _, err := client.ParsePaginationToken(token)
+	page, limit, _, err := client2.ParsePaginationToken(token)
 	if err != nil {
 		return nil, "", nil, err
 	}
@@ -170,7 +170,7 @@ func (b *organizationBuilder) Grants(
 		grants = append(grants, nextGrant)
 	}
 
-	nextToken := client.GetNextToken(page, limit, total)
+	nextToken := client2.GetNextToken(page, limit, total)
 	return grants, nextToken, outputAnnotations, nil
 }
 
@@ -236,6 +236,6 @@ func (b *organizationBuilder) Revoke(ctx context.Context, grant *v2.Grant) (anno
 	return outputAnnotations, nil
 }
 
-func newOrganizationBuilder(client *client.Client) *organizationBuilder {
+func newOrganizationBuilder(client *client2.Client) *organizationBuilder {
 	return &organizationBuilder{client: client}
 }

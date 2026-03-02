@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/conductorone/baton-auth0/pkg/connector/client"
+	client2 "github.com/conductorone/baton-auth0/pkg/client"
 	"github.com/conductorone/baton-auth0/test"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/pagination"
@@ -50,7 +50,7 @@ func TestUsersListMaxResultsCap(t *testing.T) {
 		}))
 		defer server.Close()
 
-		c0, err := client.New(ctx, server.URL, "mock", "token")
+		c0, err := client2.New(ctx, server.URL, "mock", "token")
 		require.Nil(t, err)
 
 		ub := newUserBuilder(c0)
@@ -62,11 +62,11 @@ func TestUsersListMaxResultsCap(t *testing.T) {
 		require.NotEmpty(t, nextToken, "expected a next token before reaching the 1000 cap")
 
 		// Page 9, limit 100: (9+1)*100 = 1000 >= Auth0UserSearchMaxResults, window shift expected.
-		page9Bytes, _ := json.Marshal(client.UserPagination{Page: 9, Since: "*", Until: time.Now().UTC().Format(time.RFC3339Nano)})
+		page9Bytes, _ := json.Marshal(client2.UserPagination{Page: 9, Since: "*", Until: time.Now().UTC().Format(time.RFC3339Nano)})
 		pToken9 := &pagination.Token{Token: string(page9Bytes), Size: 100}
 		_, nextToken9, _, err := ub.List(ctx, nil, pToken9)
 		require.Nil(t, err)
-		var windowShiftToken client.UserPagination
+		var windowShiftToken client2.UserPagination
 		require.Nil(t, json.Unmarshal([]byte(nextToken9), &windowShiftToken))
 		require.Equal(t, 0, windowShiftToken.Page, "expected window shift to reset page to 0")
 		require.NotEmpty(t, windowShiftToken.Since, "expected window shift to set a since date")
@@ -80,7 +80,7 @@ func TestUsersList(t *testing.T) {
 		server := test.FixturesServer()
 		defer server.Close()
 
-		percipioClient, err := client.New(
+		percipioClient, err := client2.New(
 			ctx,
 			server.URL,
 			"mock",
@@ -109,7 +109,7 @@ func TestUsersList(t *testing.T) {
 				break
 			}
 
-			var token client.UserPagination
+			var token client2.UserPagination
 			err = json.Unmarshal([]byte(nextToken), &token)
 			require.Nil(t, err)
 			require.Equal(t, token.Page, i+1)

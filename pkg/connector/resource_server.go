@@ -3,7 +3,7 @@ package connector
 import (
 	"context"
 
-	"github.com/conductorone/baton-auth0/pkg/connector/client"
+	client2 "github.com/conductorone/baton-auth0/pkg/client"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
 	"github.com/conductorone/baton-sdk/pkg/connectorbuilder"
@@ -16,10 +16,10 @@ import (
 var _ connectorbuilder.ResourceSyncer = (*resourceServerBuilder)(nil)
 
 type resourceServerBuilder struct {
-	client *client.Client
+	client *client2.Client
 }
 
-func newResourceServerBuilder(client *client.Client) *resourceServerBuilder {
+func newResourceServerBuilder(client *client2.Client) *resourceServerBuilder {
 	return &resourceServerBuilder{client: client}
 }
 
@@ -28,7 +28,7 @@ func (b *resourceServerBuilder) ResourceType(_ context.Context) *v2.ResourceType
 }
 
 func (b *resourceServerBuilder) List(ctx context.Context, _ *v2.ResourceId, pToken *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
-	page, limit, _, err := client.ParsePaginationToken(pToken)
+	page, limit, _, err := client2.ParsePaginationToken(pToken)
 	if err != nil {
 		return nil, "", nil, err
 	}
@@ -56,7 +56,7 @@ func (b *resourceServerBuilder) List(ctx context.Context, _ *v2.ResourceId, pTok
 		outputResources = append(outputResources, organizationResource0)
 	}
 
-	nextToken := client.GetNextToken(page, limit, total)
+	nextToken := client2.GetNextToken(page, limit, total)
 
 	return outputResources, nextToken, outputAnnotations, nil
 }
@@ -99,7 +99,7 @@ func (b *resourceServerBuilder) Grants(ctx context.Context, resource *v2.Resourc
 	return grantsResponse, "", outputAnnotations, nil
 }
 
-func resourceServerResource(resourceServer *client.ResourceServer) (*v2.Resource, error) {
+func resourceServerResource(resourceServer *client2.ResourceServer) (*v2.Resource, error) {
 	resource0, err := resource.NewResource(
 		resourceServer.Name,
 		resourceServerResourceType,

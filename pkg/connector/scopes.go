@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/conductorone/baton-auth0/pkg/connector/client"
+	client2 "github.com/conductorone/baton-auth0/pkg/client"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
 	"github.com/conductorone/baton-sdk/pkg/connectorbuilder"
@@ -15,10 +15,10 @@ import (
 var _ connectorbuilder.ResourceSyncer = (*scopeBuilder)(nil)
 
 type scopeBuilder struct {
-	client *client.Client
+	client *client2.Client
 }
 
-func newScopeBuilder(client *client.Client) *scopeBuilder {
+func newScopeBuilder(client *client2.Client) *scopeBuilder {
 	return &scopeBuilder{client: client}
 }
 
@@ -27,7 +27,7 @@ func (b *scopeBuilder) ResourceType(_ context.Context) *v2.ResourceType {
 }
 
 func (b *scopeBuilder) List(ctx context.Context, _ *v2.ResourceId, pToken *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
-	page, limit, _, err := client.ParsePaginationToken(pToken)
+	page, limit, _, err := client2.ParsePaginationToken(pToken)
 	if err != nil {
 		return nil, "", nil, err
 	}
@@ -57,7 +57,7 @@ func (b *scopeBuilder) List(ctx context.Context, _ *v2.ResourceId, pToken *pagin
 		}
 	}
 
-	nextToken := client.GetNextToken(page, limit, total)
+	nextToken := client2.GetNextToken(page, limit, total)
 
 	return outputResources, nextToken, outputAnnotations, nil
 }
@@ -70,7 +70,7 @@ func (b *scopeBuilder) Grants(_ context.Context, _ *v2.Resource, _ *pagination.T
 	return nil, "", nil, nil
 }
 
-func scopeResource(resourceServer client.ResourceServerScope, server *client.ResourceServer) (*v2.Resource, error) {
+func scopeResource(resourceServer client2.ResourceServerScope, server *client2.ResourceServer) (*v2.Resource, error) {
 	// Needs to be in the format of <resourceServerId>/<scopeName>
 	// Since each scope is unique to a resource server, we can use the resource server ID as a prefix
 	scopeId := formatScopeId(resourceServer, server)
@@ -93,6 +93,6 @@ func scopeResource(resourceServer client.ResourceServerScope, server *client.Res
 	return resource0, nil
 }
 
-func formatScopeId(resourceServer client.ResourceServerScope, server *client.ResourceServer) string {
+func formatScopeId(resourceServer client2.ResourceServerScope, server *client2.ResourceServer) string {
 	return fmt.Sprintf("%s:%s", server.Identifier, resourceServer.Value)
 }
