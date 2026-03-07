@@ -18,8 +18,8 @@ func WithBearerToken(token string) uhttp.RequestOption {
 func (c *Client) get(
 	ctx context.Context,
 	path string,
-	queryParameters map[string]interface{},
 	target interface{},
+	queryParameters []ReqOpt,
 ) (
 	*http.Response,
 	*v2.RateLimitDescription,
@@ -29,9 +29,9 @@ func (c *Client) get(
 		ctx,
 		http.MethodGet,
 		path,
-		queryParameters,
 		nil,
 		target,
+		queryParameters,
 	)
 }
 
@@ -49,9 +49,9 @@ func (c *Client) post(
 		ctx,
 		http.MethodPost,
 		path,
-		nil,
 		body,
 		target,
+		nil,
 	)
 }
 
@@ -87,9 +87,9 @@ func (c *Client) delete(
 		ctx,
 		http.MethodDelete,
 		path,
-		nil,
 		body,
 		target,
+		nil,
 	)
 }
 
@@ -115,9 +115,9 @@ func (c *Client) doRequest(
 	ctx context.Context,
 	method string,
 	path string,
-	queryParameters map[string]interface{},
 	payload interface{},
 	target interface{},
+	queryParameters []ReqOpt,
 ) (
 	*http.Response,
 	*v2.RateLimitDescription,
@@ -131,28 +131,31 @@ func (c *Client) doRequest(
 		options = append(options, uhttp.WithJSONBody(payload))
 	}
 
-	url := c.getUrl(path, queryParameters)
+	urlAddress := c.BaseUrl.JoinPath(path)
+	for _, opt := range queryParameters {
+		opt(urlAddress)
+	}
 
-	request, err := c.wrapper.NewRequest(ctx, method, url, options...)
+	request, err := c.wrapper.NewRequest(ctx, method, urlAddress, options...)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	var ratelimitData v2.RateLimitDescription
+	var rateLimitData v2.RateLimitDescription
 	response, err := c.wrapper.Do(
 		request,
-		uhttp.WithRatelimitData(&ratelimitData),
+		uhttp.WithRatelimitData(&rateLimitData),
 		uhttp.WithJSONResponse(target),
 	)
 
 	if err != nil {
 		if response != nil {
-			return nil, &ratelimitData, fmt.Errorf("error doing request: %w, body: %v", err, logBody(response.Body))
+			return nil, &rateLimitData, fmt.Errorf("error doing request: %w, body: %v", err, logBody(response.Body))
 		}
-		return nil, &ratelimitData, fmt.Errorf("error doing request: %w", err)
+		return nil, &rateLimitData, fmt.Errorf("error doing request: %w", err)
 	}
 
-	return response, &ratelimitData, nil
+	return response, &rateLimitData, nil
 }
 
 func logBody(body io.ReadCloser) string {

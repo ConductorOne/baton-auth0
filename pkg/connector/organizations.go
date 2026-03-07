@@ -4,13 +4,13 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/conductorone/baton-auth0/pkg/connector/client"
+	client2 "github.com/conductorone/baton-auth0/pkg/client"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
 	"github.com/conductorone/baton-sdk/pkg/connectorbuilder"
 	"github.com/conductorone/baton-sdk/pkg/pagination"
-	"github.com/conductorone/baton-sdk/pkg/types/entitlement"
-	"github.com/conductorone/baton-sdk/pkg/types/grant"
+	sdkEntitlement "github.com/conductorone/baton-sdk/pkg/types/entitlement"
+	sdkGrant "github.com/conductorone/baton-sdk/pkg/types/grant"
 	resourceSdk "github.com/conductorone/baton-sdk/pkg/types/resource"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"go.uber.org/zap"
@@ -24,16 +24,16 @@ var (
 const organizationEntitlementName = "member"
 
 type organizationBuilder struct {
-	client *client.Client
+	client *client2.Client
 }
 
-func (o *organizationBuilder) ResourceType(ctx context.Context) *v2.ResourceType {
+func (b *organizationBuilder) ResourceType(_ context.Context) *v2.ResourceType {
 	return organizationResourceType
 }
 
 // Create a new connector resource for an Auth0 organization.
 func organizationResource(
-	organization client.Organization,
+	organization client2.Organization,
 	parentResourceID *v2.ResourceId,
 ) (*v2.Resource, error) {
 	return resourceSdk.NewGroupResource(
@@ -54,7 +54,7 @@ func organizationResource(
 }
 
 // List returns all the organizations from the database as resource objects.
-func (o *organizationBuilder) List(
+func (b *organizationBuilder) List(
 	ctx context.Context,
 	parentResourceID *v2.ResourceId,
 	pToken *pagination.Token,
@@ -64,22 +64,22 @@ func (o *organizationBuilder) List(
 	annotations.Annotations,
 	error,
 ) {
-	logger := ctxzap.Extract(ctx)
-	logger.Debug("Starting Organizations List", zap.String("token", pToken.Token))
-
 	outputResources := make([]*v2.Resource, 0)
 	var outputAnnotations annotations.Annotations
 
-	page, limit, _, err := client.ParsePaginationToken(pToken)
+	page, limit, _, err := client2.ParsePaginationToken(pToken)
 	if err != nil {
 		return nil, "", nil, err
 	}
 
-	organizations, total, ratelimitData, err := o.client.GetOrganizations(ctx, limit, page)
-	outputAnnotations.WithRateLimiting(ratelimitData)
+	organizations, total, rateLimitData, err := b.client.GetOrganizations(ctx, limit, page)
 	if err != nil {
+		if rateLimitData != nil {
+			outputAnnotations.WithRateLimiting(rateLimitData)
+		}
 		return nil, "", outputAnnotations, err
 	}
+	outputAnnotations.WithRateLimiting(rateLimitData)
 
 	if len(organizations) == 0 {
 		return outputResources, "", outputAnnotations, nil
@@ -93,12 +93,11 @@ func (o *organizationBuilder) List(
 		outputResources = append(outputResources, organizationResource0)
 	}
 
-	nextToken := client.GetNextToken(page, limit, total)
-
+	nextToken := client2.GetNextToken(page, limit, total)
 	return outputResources, nextToken, outputAnnotations, nil
 }
 
-func (o *organizationBuilder) Entitlements(
+func (b *organizationBuilder) Entitlements(
 	_ context.Context,
 	resource *v2.Resource,
 	_ *pagination.Token,
@@ -109,21 +108,21 @@ func (o *organizationBuilder) Entitlements(
 	error,
 ) {
 	return []*v2.Entitlement{
-		entitlement.NewAssignmentEntitlement(
+		sdkEntitlement.NewAssignmentEntitlement(
 			resource,
 			organizationEntitlementName,
-			entitlement.WithGrantableTo(userResourceType),
-			entitlement.WithDisplayName(
+			sdkEntitlement.WithGrantableTo(userResourceType),
+			sdkEntitlement.WithDisplayName(
 				fmt.Sprintf("%s %s", resource.DisplayName, organizationEntitlementName),
 			),
-			entitlement.WithDescription(
+			sdkEntitlement.WithDescription(
 				fmt.Sprintf("Member of %s organization in Auth0", resource.DisplayName),
 			),
 		),
 	}, "", nil, nil
 }
 
-func (o *organizationBuilder) Grants(
+func (b *organizationBuilder) Grants(
 	ctx context.Context,
 	resource *v2.Resource,
 	token *pagination.Token,
@@ -134,21 +133,24 @@ func (o *organizationBuilder) Grants(
 	error,
 ) {
 	var outputAnnotations annotations.Annotations
-	page, limit, _, err := client.ParsePaginationToken(token)
+	page, limit, _, err := client2.ParsePaginationToken(token)
 	if err != nil {
 		return nil, "", nil, err
 	}
 
-	members, total, ratelimitData, err := o.client.GetOrganizationMembers(
+	members, total, rateLimitData, err := b.client.GetOrganizationMembers(
 		ctx,
 		resource.Id.Resource,
 		limit,
 		page,
 	)
-	outputAnnotations.WithRateLimiting(ratelimitData)
 	if err != nil {
+		if rateLimitData != nil {
+			outputAnnotations.WithRateLimiting(rateLimitData)
+		}
 		return nil, "", outputAnnotations, err
 	}
+	outputAnnotations.WithRateLimiting(rateLimitData)
 
 	if len(members) == 0 {
 		return nil, "", outputAnnotations, nil
@@ -160,7 +162,7 @@ func (o *organizationBuilder) Grants(
 		if err != nil {
 			return nil, "", outputAnnotations, err
 		}
-		nextGrant := grant.NewGrant(
+		nextGrant := sdkGrant.NewGrant(
 			resource,
 			organizationEntitlementName,
 			principalId,
@@ -168,12 +170,11 @@ func (o *organizationBuilder) Grants(
 		grants = append(grants, nextGrant)
 	}
 
-	nextToken := client.GetNextToken(page, limit, total)
-
+	nextToken := client2.GetNextToken(page, limit, total)
 	return grants, nextToken, outputAnnotations, nil
 }
 
-func (o *organizationBuilder) Grant(
+func (b *organizationBuilder) Grant(
 	ctx context.Context,
 	principal *v2.Resource,
 	entitlement *v2.Entitlement,
@@ -181,11 +182,11 @@ func (o *organizationBuilder) Grant(
 	annotations.Annotations,
 	error,
 ) {
-	logger := ctxzap.Extract(ctx)
+	l := ctxzap.Extract(ctx)
 	userId := principal.Id.Resource
 	organizationId := entitlement.Resource.Id.Resource
 	if principal.Id.ResourceType != userResourceType.Id {
-		logger.Warn(
+		l.Warn(
 			"baton-auth0: only users can be granted role membership",
 			zap.String("principal_type", principal.Id.ResourceType),
 			zap.String("principal_id", principal.Id.Resource),
@@ -194,24 +195,27 @@ func (o *organizationBuilder) Grant(
 	}
 
 	var outputAnnotations annotations.Annotations
-	ratelimitData, err := o.client.AddUserToOrganization(ctx, organizationId, userId)
-	outputAnnotations.WithRateLimiting(ratelimitData)
+	rateLimitData, err := b.client.AddUserToOrganization(ctx, organizationId, userId)
 	if err != nil {
-		return outputAnnotations, fmt.Errorf("baton-aouth0: failed to add user to organization: %s", err.Error())
+		if rateLimitData != nil {
+			outputAnnotations.WithRateLimiting(rateLimitData)
+		}
+		return outputAnnotations, fmt.Errorf("baton-auth0: failed to add user to organization: %w", err)
 	}
+	outputAnnotations.WithRateLimiting(rateLimitData)
 
 	return outputAnnotations, nil
 }
 
-func (o *organizationBuilder) Revoke(ctx context.Context, grant *v2.Grant) (annotations.Annotations, error) {
-	logger := ctxzap.Extract(ctx)
+func (b *organizationBuilder) Revoke(ctx context.Context, grant *v2.Grant) (annotations.Annotations, error) {
+	l := ctxzap.Extract(ctx)
 	entitlement := grant.Entitlement
 	principal := grant.Principal
 	organizationId := entitlement.Resource.Id.Resource
 	userId := principal.Id.Resource
 
 	if principal.Id.ResourceType != userResourceType.Id {
-		logger.Warn(
+		l.Warn(
 			"baton-auth0: only users can have organization membership revoked",
 			zap.String("principal_type", principal.Id.ResourceType),
 			zap.String("principal_id", userId),
@@ -220,15 +224,18 @@ func (o *organizationBuilder) Revoke(ctx context.Context, grant *v2.Grant) (anno
 	}
 
 	var outputAnnotations annotations.Annotations
-	ratelimitData, err := o.client.RemoveUserFromOrganization(ctx, organizationId, userId)
-	outputAnnotations.WithRateLimiting(ratelimitData)
-
+	rateLimitData, err := b.client.RemoveUserFromOrganization(ctx, organizationId, userId)
 	if err != nil {
-		return outputAnnotations, fmt.Errorf("baton-auth0: failed to revoke membership to organization: %s", err.Error())
+		if rateLimitData != nil {
+			outputAnnotations.WithRateLimiting(rateLimitData)
+		}
+		return outputAnnotations, fmt.Errorf("baton-auth0: failed to revoke membership to organization: %w", err)
 	}
+	outputAnnotations.WithRateLimiting(rateLimitData)
+
 	return outputAnnotations, nil
 }
 
-func newOrganizationBuilder(client *client.Client) *organizationBuilder {
+func newOrganizationBuilder(client *client2.Client) *organizationBuilder {
 	return &organizationBuilder{client: client}
 }
