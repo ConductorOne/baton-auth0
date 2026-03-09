@@ -2,8 +2,9 @@ package connector
 
 import (
 	"context"
+	"time"
 
-	"github.com/conductorone/baton-auth0/pkg/connector/client"
+	client2 "github.com/conductorone/baton-auth0/pkg/client"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
 	"github.com/conductorone/baton-sdk/pkg/connectorbuilder"
@@ -16,15 +17,15 @@ import (
 var _ connectorbuilder.ResourceSyncer = (*userBuilder)(nil)
 
 type userBuilder struct {
-	client *client.Client
+	client *client2.Client
 }
 
-func (o *userBuilder) ResourceType(ctx context.Context) *v2.ResourceType {
+func (b *userBuilder) ResourceType(_ context.Context) *v2.ResourceType {
 	return userResourceType
 }
 
 // Create a new connector resource for an Auth0 user.
-func userResource(user client.User, parentResourceID *v2.ResourceId) (*v2.Resource, error) {
+func userResource(user client2.User, parentResourceID *v2.ResourceId) (*v2.Resource, error) {
 	firstName, lastName := resourceSdk.SplitFullName(user.Name)
 
 	profile := map[string]interface{}{
@@ -53,7 +54,7 @@ func userResource(user client.User, parentResourceID *v2.ResourceId) (*v2.Resour
 
 // List returns all the users from the database as resource objects.
 // Users include a UserTrait because they are the 'shape' of a standard user.
-func (o *userBuilder) List(
+func (b *userBuilder) List(
 	ctx context.Context,
 	parentResourceID *v2.ResourceId,
 	pToken *pagination.Token,
@@ -63,28 +64,39 @@ func (o *userBuilder) List(
 	annotations.Annotations,
 	error,
 ) {
-	logger := ctxzap.Extract(ctx)
-	logger.Debug("Starting Users List", zap.String("token", pToken.Token))
+	l := ctxzap.Extract(ctx)
 
 	outputResources := make([]*v2.Resource, 0)
 	var outputAnnotations annotations.Annotations
 
-	page, limit, _, err := client.ParsePaginationToken(pToken)
+	page, limit, since, until, newestUserCreationDate, err := client2.ParseUserPaginationToken(pToken)
 	if err != nil {
 		return nil, "", nil, err
 	}
 
-	users, total, ratelimitData, err := o.client.GetUsers(ctx, limit, page)
-	outputAnnotations.WithRateLimiting(ratelimitData)
+	users, total, rateLimitData, err := b.client.GetUsers(ctx, limit, page, since, until)
 	if err != nil {
+		if rateLimitData != nil {
+			outputAnnotations.WithRateLimiting(rateLimitData)
+		}
 		return nil, "", outputAnnotations, err
 	}
+	outputAnnotations.WithRateLimiting(rateLimitData)
 
 	if len(users) == 0 {
 		return outputResources, "", outputAnnotations, nil
 	}
 
+	var newestCreatedAt time.Time
+	if newestUserCreationDate != nil {
+		newestCreatedAt = *newestUserCreationDate
+	}
+
 	for _, user := range users {
+		if user.CreatedAt.UTC().After(newestCreatedAt) {
+			newestCreatedAt = user.CreatedAt.UTC()
+		}
+
 		userResource0, err := userResource(user, parentResourceID)
 		if err != nil {
 			return nil, "", nil, err
@@ -92,15 +104,28 @@ func (o *userBuilder) List(
 		outputResources = append(outputResources, userResource0)
 	}
 
-	// TODO(marcos): it might never be possible to get a second page if we are limited to 1,000 results.
-	// See https://auth0.com/docs/users/search/v3/view-search-results-by-page#limitation.
-	nextToken := client.GetNextToken(page, limit, total)
+	// Auth0's User Search API enforces a hard cap of 1,000 results, even when paginating.
+	// Requesting beyond this limit returns a 400 error.
+	// See https://auth0.com/docs/manage-users/user-search/view-search-results-by-page#limitation.
+	if total > client2.Auth0UserSearchMaxResults {
+		l.Debug(
+			"Auth0 user search exceeds 1000-result API limit; using date-range windowing to fetch remaining users.",
+			zap.Int("total_users", total),
+			zap.Int("api_limit", client2.Auth0UserSearchMaxResults),
+		)
+		total = client2.Auth0UserSearchMaxResults
+	}
+
+	nextToken, err := client2.GetNextUsersToken(page, limit, total, since, &newestCreatedAt)
+	if err != nil {
+		return nil, "", nil, err
+	}
 
 	return outputResources, nextToken, outputAnnotations, nil
 }
 
 // Entitlements always returns an empty slice for users.
-func (o *userBuilder) Entitlements(
+func (b *userBuilder) Entitlements(
 	_ context.Context,
 	_ *v2.Resource,
 	_ *pagination.Token,
@@ -114,7 +139,7 @@ func (o *userBuilder) Entitlements(
 }
 
 // Grants always returns an empty slice for users since they don't have any entitlements.
-func (o *userBuilder) Grants(
+func (b *userBuilder) Grants(
 	_ context.Context,
 	_ *v2.Resource,
 	_ *pagination.Token,
@@ -127,6 +152,6 @@ func (o *userBuilder) Grants(
 	return nil, "", nil, nil
 }
 
-func newUserBuilder(client *client.Client) *userBuilder {
+func newUserBuilder(client *client2.Client) *userBuilder {
 	return &userBuilder{client: client}
 }

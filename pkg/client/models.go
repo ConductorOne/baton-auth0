@@ -5,12 +5,12 @@ import "time"
 type AuthRequest struct {
 	Audience     string `json:"audience"`
 	ClientId     string `json:"client_id"`
-	ClientSecret string `json:"client_secret"`
+	ClientSecret string `json:"client_secret"` //nolint:gosec // intentional: holds the OAuth client secret for token requests
 	GrantType    string `json:"grant_type"`
 }
 
 type AuthResponse struct {
-	AccessToken string `json:"access_token"`
+	AccessToken string `json:"access_token"` //nolint:gosec // intentional: holds the OAuth access token from Auth0's token response
 	ExpiresIn   int    `json:"expires_in"`
 	Scope       string `json:"scope,omitempty"`
 	TokenType   string `json:"token_type"`
@@ -33,9 +33,9 @@ type OrganizationsResponse struct {
 }
 
 type PaginatedResponse struct {
-	Start int `json:"start"`
-	Limit int `json:"limit"`
-	Total int `json:"total"`
+	Start int `json:"start,omitempty"`
+	Limit int `json:"limit,omitempty"`
+	Total int `json:"total,omitempty"`
 }
 
 type Role struct {

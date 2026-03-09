@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/uhttp"
@@ -13,8 +14,18 @@ import (
 
 type Client struct {
 	wrapper     *uhttp.BaseHttpClient
-	BearerToken string
+	BearerToken string //nolint:gosec // intentional: stores the OAuth bearer token for API authentication
 	BaseUrl     *url.URL
+}
+
+type ReqOpt func(reqURL *url.URL)
+
+func WithQueryParam(key string, value string) ReqOpt {
+	return func(reqURL *url.URL) {
+		q := reqURL.Query()
+		q.Set(key, value)
+		reqURL.RawQuery = q.Encode()
+	}
 }
 
 func New(
@@ -96,8 +107,7 @@ func (c *Client) List(
 	ctx context.Context,
 	path string,
 	target interface{},
-	limit int,
-	page int,
+	opts ...ReqOpt,
 ) (
 	*v2.RateLimitDescription,
 	error,
@@ -105,13 +115,8 @@ func (c *Client) List(
 	response, rateLimitData, err := c.get(
 		ctx,
 		path,
-		map[string]interface{}{
-			// Note: `include_totals` changes the shape of the response
-			"include_totals": true,
-			"page":           page,
-			"per_page":       limit,
-		},
 		&target,
+		opts,
 	)
 
 	if err != nil {
@@ -127,6 +132,8 @@ func (c *Client) GetUsers(
 	ctx context.Context,
 	limit int,
 	page int,
+	since string,
+	until string,
 ) (
 	[]User,
 	int,
@@ -138,8 +145,11 @@ func (c *Client) GetUsers(
 		ctx,
 		apiPathGetUsers,
 		&target,
-		limit,
-		page,
+		WithQueryParam("include_totals", "true"),
+		WithQueryParam("page", strconv.Itoa(page)),
+		WithQueryParam("per_page", strconv.Itoa(limit)),
+		WithQueryParam("sort", "created_at:1"),
+		WithQueryParam("q", fmt.Sprintf("created_at:[%s TO %s]", since, until)),
 	)
 	if err != nil {
 		return nil, 0, rateLimitData, err
@@ -163,8 +173,9 @@ func (c *Client) GetRoles(
 		ctx,
 		apiPathGetRoles,
 		&target,
-		limit,
-		page,
+		WithQueryParam("include_totals", "true"),
+		WithQueryParam("page", strconv.Itoa(page)),
+		WithQueryParam("per_page", strconv.Itoa(limit)),
 	)
 	if err != nil {
 		return nil, 0, rateLimitData, err
@@ -188,8 +199,9 @@ func (c *Client) GetOrganizations(
 		ctx,
 		apiPathGetOrganizations,
 		&target,
-		limit,
-		page,
+		WithQueryParam("include_totals", "true"),
+		WithQueryParam("page", strconv.Itoa(page)),
+		WithQueryParam("per_page", strconv.Itoa(limit)),
 	)
 	if err != nil {
 		return nil, 0, rateLimitData, err
@@ -214,8 +226,9 @@ func (c *Client) GetOrganizationMembers(
 		ctx,
 		fmt.Sprintf(apiPathOrganizationMembers, organizationId),
 		&target,
-		limit,
-		page,
+		WithQueryParam("include_totals", "true"),
+		WithQueryParam("page", strconv.Itoa(page)),
+		WithQueryParam("per_page", strconv.Itoa(limit)),
 	)
 	if err != nil {
 		return nil, 0, rateLimitData, err
@@ -240,8 +253,9 @@ func (c *Client) GetRoleUsers(
 		ctx,
 		fmt.Sprintf(apiPathUsersForRole, roleId),
 		&target,
-		limit,
-		page,
+		WithQueryParam("include_totals", "true"),
+		WithQueryParam("page", strconv.Itoa(page)),
+		WithQueryParam("per_page", strconv.Itoa(limit)),
 	)
 	if err != nil {
 		return nil, 0, rateLimitData, err
@@ -364,8 +378,9 @@ func (c *Client) GetResourceServers(
 		ctx,
 		apiPathGetResourceServers,
 		&target,
-		limit,
-		page,
+		WithQueryParam("include_totals", "true"),
+		WithQueryParam("page", strconv.Itoa(page)),
+		WithQueryParam("per_page", strconv.Itoa(limit)),
 	)
 	if err != nil {
 		return nil, 0, rateLimitData, err
@@ -386,8 +401,8 @@ func (c *Client) GetResourceServer(
 	response, rateLimitData, err := c.get(
 		ctx,
 		fmt.Sprintf(apiPathResourceServers, id),
-		nil,
 		&target,
+		nil,
 	)
 	if err != nil {
 		return nil, rateLimitData, err
@@ -410,8 +425,8 @@ func (c *Client) GetRolePermissions(
 	response, rateLimitData, err := c.get(
 		ctx,
 		fmt.Sprintf(apiPathRolePermissions, id),
-		nil,
 		&target,
+		nil,
 	)
 	if err != nil {
 		return nil, rateLimitData, err
