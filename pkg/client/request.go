@@ -35,26 +35,6 @@ func (c *Client) get(
 	)
 }
 
-func (c *Client) post(
-	ctx context.Context,
-	path string,
-	body interface{},
-	target interface{},
-) (
-	*http.Response,
-	*v2.RateLimitDescription,
-	error,
-) {
-	return c.doRequest(
-		ctx,
-		http.MethodPost,
-		path,
-		body,
-		target,
-		nil,
-	)
-}
-
 func (c *Client) postNoJSONResponse(
 	ctx context.Context,
 	path string,
@@ -70,26 +50,6 @@ func (c *Client) postNoJSONResponse(
 		path,
 		nil,
 		body,
-	)
-}
-
-func (c *Client) delete(
-	ctx context.Context,
-	path string,
-	body interface{},
-	target interface{},
-) (
-	*http.Response,
-	*v2.RateLimitDescription,
-	error,
-) {
-	return c.doRequest(
-		ctx,
-		http.MethodDelete,
-		path,
-		body,
-		target,
-		nil,
 	)
 }
 
@@ -201,7 +161,10 @@ func (c *Client) doRequestNoJSONResponse(
 	)
 
 	if err != nil {
-		return nil, &ratelimitData, fmt.Errorf("error doing request: %w, body: %v", err, logBody(response.Body))
+		if response != nil {
+			return nil, &ratelimitData, fmt.Errorf("error doing request: %w, body: %v", err, logBody(response.Body))
+		}
+		return nil, &ratelimitData, fmt.Errorf("error doing request: %w", err)
 	}
 
 	return response, &ratelimitData, nil

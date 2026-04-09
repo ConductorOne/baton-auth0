@@ -272,20 +272,18 @@ func (c *Client) AddUserToRole(
 	*v2.RateLimitDescription,
 	error,
 ) {
-	var target RolesUsersResponse
-	response, rateLimitData, err := c.post(
+	response, rateLimitData, err := c.postNoJSONResponse(
 		ctx,
 		fmt.Sprintf(apiPathRolesForUser, userId),
 		map[string]interface{}{
 			"roles": []string{roleId},
 		},
-		&target,
 	)
 	if err != nil {
 		return rateLimitData, err
 	}
 	defer response.Body.Close()
-	// TODO MARCOS check for double grant.
+
 	return rateLimitData, nil
 }
 
@@ -297,21 +295,19 @@ func (c *Client) RemoveUserFromRole(
 	*v2.RateLimitDescription,
 	error,
 ) {
-	var target RolesUsersResponse
-	response, rateLimitData, err := c.delete(
+	response, rateLimitData, err := c.deleteNoJSONResponse(
 		ctx,
 		fmt.Sprintf(apiPathRolesForUser, userId),
 		map[string]interface{}{
 			"roles": []string{roleId},
 		},
-		&target,
 	)
 	if err != nil {
 		return rateLimitData, err
 	}
 
 	defer response.Body.Close()
-	// TODO MARCOS check for double revoke.
+
 	return rateLimitData, nil
 }
 
