@@ -137,6 +137,38 @@ func ParsePaginationTokenString(pToken string) (
 	return page, limit, pagingRequestId, nil
 }
 
+// RoleUserCheckpointPagination holds the opaque checkpoint token used by Auth0's
+// checkpoint-based pagination for the GET /api/v2/roles/{id}/users endpoint.
+type RoleUserCheckpointPagination struct {
+	From string `json:"from,omitempty"`
+}
+
+// ParseRoleUserCheckpointToken extracts the checkpoint "from" value from a
+// serialized RoleUserCheckpointPagination token. Returns "" for the first page.
+func ParseRoleUserCheckpointToken(token string) (string, error) {
+	if token == "" {
+		return "", nil
+	}
+	var parsed RoleUserCheckpointPagination
+	if err := json.Unmarshal([]byte(token), &parsed); err != nil {
+		return "", err
+	}
+	return parsed.From, nil
+}
+
+// GetNextRoleUserCheckpointToken serializes the checkpoint token returned by
+// Auth0 into a pagination token string. Returns "" when next is empty (no more pages).
+func GetNextRoleUserCheckpointToken(next string) string {
+	if next == "" {
+		return ""
+	}
+	bytes, err := json.Marshal(RoleUserCheckpointPagination{From: next})
+	if err != nil {
+		return ""
+	}
+	return string(bytes)
+}
+
 // GetNextToken given a limit and page that were used to fetch _this_ page of
 // data, and total number of resources, return the next pagination token as a
 // string.

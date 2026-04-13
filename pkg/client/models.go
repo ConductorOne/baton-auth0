@@ -54,6 +54,15 @@ type RolesUsersResponse struct {
 	Users []User `json:"users"`
 }
 
+// RolesUsersCheckpointResponse is the response shape for Auth0's checkpoint-based
+// pagination on the GET /api/v2/roles/{id}/users endpoint. Unlike page-based
+// pagination, checkpoint pagination has no 1000-record hard cap.
+type RolesUsersCheckpointResponse struct {
+	Users []User `json:"users"`
+	// Next is the opaque checkpoint token for the next page; empty when there are no more pages.
+	Next string `json:"next"`
+}
+
 type User struct {
 	CreatedAt     time.Time        `json:"created_at"`
 	Email         string           `json:"email"`
