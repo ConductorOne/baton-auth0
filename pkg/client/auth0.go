@@ -237,31 +237,39 @@ func (c *Client) GetOrganizationMembers(
 	return target.Members, target.Total, rateLimitData, nil
 }
 
-func (c *Client) GetRoleUsers(
+// GetRoleUsersCheckpoint fetches one page of users assigned to a role using Auth0's
+// checkpoint-based pagination, which has no 1000-record hard cap unlike page-based
+// pagination. Pass an empty "from" to fetch the first page; subsequent pages use the
+// "next" value returned in the previous response.
+func (c *Client) GetRoleUsersCheckpoint(
 	ctx context.Context,
 	roleId string,
-	limit int,
-	page int,
+	from string,
+	take int,
 ) (
 	[]User,
-	int,
+	string,
 	*v2.RateLimitDescription,
 	error,
 ) {
-	var target RolesUsersResponse
+	var target RolesUsersCheckpointResponse
+	opts := []ReqOpt{
+		WithQueryParam("take", strconv.Itoa(take)),
+	}
+	if from != "" {
+		opts = append(opts, WithQueryParam("from", from))
+	}
 	rateLimitData, err := c.List(
 		ctx,
 		fmt.Sprintf(apiPathUsersForRole, roleId),
 		&target,
-		WithQueryParam("include_totals", "true"),
-		WithQueryParam("page", strconv.Itoa(page)),
-		WithQueryParam("per_page", strconv.Itoa(limit)),
+		opts...,
 	)
 	if err != nil {
-		return nil, 0, rateLimitData, err
+		return nil, "", rateLimitData, err
 	}
 
-	return target.Users, target.Total, rateLimitData, nil
+	return target.Users, target.Next, rateLimitData, nil
 }
 
 func (c *Client) AddUserToRole(

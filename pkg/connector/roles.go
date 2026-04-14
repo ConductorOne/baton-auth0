@@ -183,16 +183,19 @@ func (b *roleBuilder) Grants(
 	switch state.ResourceTypeID {
 	case userResourceType.Id:
 		var outputAnnotations annotations.Annotations
-		page, limit, _, err := client2.ParsePaginationTokenString(state.Token)
+
+		// Auth0's page-based pagination for this endpoint has a hard 1000-record cap.
+		// Checkpoint pagination ("from"/"take") has no such limit.
+		from, err := client2.ParseRoleUserCheckpointToken(state.Token)
 		if err != nil {
 			return nil, "", nil, err
 		}
 
-		users, total, rateLimitData, err := b.client.GetRoleUsers(
+		users, next, rateLimitData, err := b.client.GetRoleUsersCheckpoint(
 			ctx,
 			resource.Id.Resource,
-			limit,
-			page,
+			from,
+			client2.PageSizeDefault,
 		)
 		if err != nil {
 			if rateLimitData != nil {
@@ -220,7 +223,7 @@ func (b *roleBuilder) Grants(
 			grants = append(grants, nextGrant)
 		}
 
-		nextToken, err := bag.NextToken(client2.GetNextToken(page, limit, total))
+		nextToken, err := bag.NextToken(client2.GetNextRoleUserCheckpointToken(next))
 		if err != nil {
 			return nil, "", nil, err
 		}
