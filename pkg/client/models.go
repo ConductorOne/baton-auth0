@@ -115,3 +115,37 @@ type RolePermission struct {
 	ResourceServerName       string `json:"resource_server_name"`
 	ResourceServerIdentifier string `json:"resource_server_identifier"`
 }
+
+// AppTypeNonInteractive is the Auth0 app_type for machine-to-machine (M2M)
+// clients: applications that authenticate as themselves via the
+// client_credentials grant and hold their own credentials & scopes.
+const AppTypeNonInteractive = "non_interactive"
+
+// Application is an Auth0 client (application). M2M clients have
+// app_type=="non_interactive" and use the client_credentials grant.
+type Application struct {
+	ClientId   string   `json:"client_id"`
+	Name       string   `json:"name"`
+	AppType    string   `json:"app_type"`
+	GrantTypes []string `json:"grant_types"`
+}
+
+// IsM2M reports whether the application is a machine-to-machine client. The
+// canonical marker is app_type=="non_interactive"; client_credentials in
+// grant_types is the functional signal and is accepted as a fallback.
+func (a Application) IsM2M() bool {
+	if a.AppType == AppTypeNonInteractive {
+		return true
+	}
+	for _, gt := range a.GrantTypes {
+		if gt == "client_credentials" {
+			return true
+		}
+	}
+	return false
+}
+
+type ClientsResponse struct {
+	PaginatedResponse
+	Clients []Application `json:"clients"`
+}
