@@ -393,6 +393,38 @@ func (c *Client) GetResourceServers(
 	return target.ResourceServers, target.Total, rateLimitData, nil
 }
 
+// GetClients fetches one page of Auth0 clients (applications), filtered
+// server-side to machine-to-machine (M2M) clients via app_type=non_interactive.
+// See https://auth0.com/docs/api/management/v2/clients/get-clients.
+func (c *Client) GetClients(
+	ctx context.Context,
+	limit int,
+	page int,
+) (
+	[]Application,
+	int,
+	*v2.RateLimitDescription,
+	error,
+) {
+	var target ClientsResponse
+	rateLimitData, err := c.List(
+		ctx,
+		apiPathGetClients,
+		&target,
+		WithQueryParam("include_totals", "true"),
+		WithQueryParam("page", strconv.Itoa(page)),
+		WithQueryParam("per_page", strconv.Itoa(limit)),
+		WithQueryParam("app_type", AppTypeNonInteractive),
+		WithQueryParam("fields", "client_id,name,app_type,grant_types"),
+		WithQueryParam("include_fields", "true"),
+	)
+	if err != nil {
+		return nil, 0, rateLimitData, err
+	}
+
+	return target.Clients, target.Total, rateLimitData, nil
+}
+
 func (c *Client) GetResourceServer(
 	ctx context.Context,
 	id string,
