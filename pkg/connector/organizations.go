@@ -40,15 +40,12 @@ func organizationResource(
 		organization.Name,
 		organizationResourceType,
 		organization.ID,
-		[]resourceSdk.GroupTraitOption{
-			resourceSdk.WithGroupProfile(
-				map[string]interface{}{
-					"id":           organization.ID,
-					"name":         organization.Name,
-					"display_name": organization.DisplayName,
-				},
-			),
-		},
+		[]resourceSdk.GroupTraitOption{},
+		resourceSdk.WithResourceProfile(map[string]interface{}{
+			"id":           organization.ID,
+			"name":         organization.Name,
+			"display_name": organization.DisplayName,
+		}),
 		resourceSdk.WithParentResourceID(parentResourceID),
 	)
 }

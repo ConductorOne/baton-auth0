@@ -38,8 +38,6 @@ func userResource(user client2.User, parentResourceID *v2.ResourceId) (*v2.Resou
 
 	userTraitOptions := []resourceSdk.UserTraitOption{
 		resourceSdk.WithEmail(user.Email, true),
-		resourceSdk.WithStatus(v2.UserTrait_Status_STATUS_ENABLED),
-		resourceSdk.WithUserProfile(profile),
 		resourceSdk.WithUserLogin(user.Email),
 	}
 
@@ -48,6 +46,8 @@ func userResource(user client2.User, parentResourceID *v2.ResourceId) (*v2.Resou
 		userResourceType,
 		user.UserId,
 		userTraitOptions,
+		resourceSdk.WithResourceStatus(v2.Status_RESOURCE_STATUS_ENABLED, ""),
+		resourceSdk.WithResourceProfile(profile),
 		resourceSdk.WithParentResourceID(parentResourceID),
 	)
 }
