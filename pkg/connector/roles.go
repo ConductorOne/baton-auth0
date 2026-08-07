@@ -39,15 +39,12 @@ func roleResource(role client2.Role, parentResourceID *v2.ResourceId) (*v2.Resou
 		role.Name,
 		roleResourceType,
 		role.ID,
-		[]resourceSdk.RoleTraitOption{
-			resourceSdk.WithRoleProfile(
-				map[string]interface{}{
-					"id":          role.ID,
-					"name":        role.Name,
-					"description": role.Description,
-				},
-			),
-		},
+		[]resourceSdk.RoleTraitOption{},
+		resourceSdk.WithResourceProfile(map[string]interface{}{
+			"id":          role.ID,
+			"name":        role.Name,
+			"description": role.Description,
+		}),
 		resourceSdk.WithParentResourceID(parentResourceID),
 	)
 }
