@@ -40,13 +40,21 @@ func userResource(user client2.User, parentResourceID *v2.ResourceId) (*v2.Resou
 		resourceSdk.WithEmail(user.Email, true),
 		resourceSdk.WithUserLogin(user.Email),
 	}
+	if user.LastLogin != nil {
+		userTraitOptions = append(userTraitOptions, resourceSdk.WithLastLogin(*user.LastLogin))
+	}
+
+	status := v2.Status_RESOURCE_STATUS_ENABLED
+	if user.Blocked {
+		status = v2.Status_RESOURCE_STATUS_DISABLED
+	}
 
 	return resourceSdk.NewUserResource(
 		user.Nickname,
 		userResourceType,
 		user.UserId,
 		userTraitOptions,
-		resourceSdk.WithResourceStatus(v2.Status_RESOURCE_STATUS_ENABLED, ""),
+		resourceSdk.WithResourceStatus(status, ""),
 		resourceSdk.WithResourceProfile(profile),
 		resourceSdk.WithParentResourceID(parentResourceID),
 	)

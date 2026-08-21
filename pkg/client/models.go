@@ -59,10 +59,12 @@ type RolesUsersCheckpointResponse struct {
 }
 
 type User struct {
+	Blocked       bool             `json:"blocked"`
 	CreatedAt     time.Time        `json:"created_at"`
 	Email         string           `json:"email"`
 	EmailVerified bool             `json:"email_verified"`
 	Identities    []UserIdentities `json:"identities"`
+	LastLogin     *time.Time       `json:"last_login"`
 	Name          string           `json:"name"`
 	Nickname      string           `json:"nickname"`
 	Picture       string           `json:"picture"`
