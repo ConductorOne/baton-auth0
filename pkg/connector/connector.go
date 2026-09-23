@@ -21,6 +21,7 @@ func (d *Connector) ResourceSyncers(_ context.Context) []connectorbuilder.Resour
 		newUserBuilder(d.client),
 		newOrganizationBuilder(d.client),
 		newRoleBuilder(d.client, d.syncPermissions),
+		newClientBuilder(d.client),
 	}
 
 	if d.syncPermissions {
