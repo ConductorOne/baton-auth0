@@ -3,6 +3,24 @@
   "resourceTypeCapabilities": [
     {
       "resourceType": {
+        "id": "client",
+        "displayName": "M2M Client",
+        "traits": [
+          "TRAIT_APP"
+        ],
+        "annotations": [
+          {
+            "@type": "type.googleapis.com/c1.connector.v2.SkipEntitlementsAndGrants"
+          }
+        ]
+      },
+      "capabilities": [
+        "CAPABILITY_SYNC"
+      ],
+      "permissions": {}
+    },
+    {
+      "resourceType": {
         "id": "organization",
         "displayName": "Organization",
         "traits": [
