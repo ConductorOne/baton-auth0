@@ -44,4 +44,13 @@ var (
 		Traits:      []v2.ResourceType_Trait{},
 		Annotations: skipEntitlementsAndGrants(),
 	}
+
+	// clientResourceType is an Auth0 machine-to-machine (M2M) client. It is a
+	// non-human identity (app registration) holding its own credentials & scopes.
+	clientResourceType = &v2.ResourceType{
+		Id:          "client",
+		DisplayName: "M2M Client",
+		Traits:      []v2.ResourceType_Trait{v2.ResourceType_TRAIT_APP},
+		Annotations: skipEntitlementsAndGrants(),
+	}
 )
