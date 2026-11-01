@@ -32,6 +32,10 @@ type roleBuilder struct {
 	// log sampler: the Warn fires only at occurrences 1, 10, 100, then
 	// every 1000 (with total_occurrences), so a tenant-wide checkpoint
 	// degradation logs once per sample window, not once per role.
+	// The counter is PER-PROCESS: in Lambda mode each page is a separate
+	// invocation, so it does not accumulate across pages and each affected
+	// role logs one occurrence-1 Warn. Volume bounding is therefore
+	// best-effort by process lifetime.
 	repeatedCursorWarns atomic.Uint64
 }
 
@@ -41,7 +45,9 @@ func (b *roleBuilder) ResourceType(_ context.Context) *v2.ResourceType {
 
 // repeatedCursorWarnSampled reports whether occurrence n of the repeated-next
 // token event should emit a Warn under the L7 logarithmic sampler
-// (1, 10, 100, then every 1000).
+// (1, 10, 100, then every 1000). The counter is per-process (see the
+// repeatedCursorWarns field): in Lambda mode pages run as separate
+// invocations, so decay applies only within one process lifetime.
 func repeatedCursorWarnSampled(total uint64) bool {
 	return total == 1 || total == 10 || total == 100 || total%1000 == 0
 }
@@ -233,8 +239,14 @@ func (b *roleBuilder) Grants(
 			grants = append(grants, nextGrant)
 		}
 
+		// Derive the repeated-cursor condition from the helper's RETURN instead
+		// of re-deriving it by hand: GetNextRoleUserCheckpointToken returns ""
+		// iff next is empty or repeats from, so a non-empty next whose token
+		// came back empty is exactly the repeated-cursor case. If the helper
+		// ever learns a new exhaustion condition, this branch follows it.
+		nextCheckpointToken := client2.GetNextRoleUserCheckpointToken(from, next)
 		l := ctxzap.Extract(ctx)
-		if next != "" && next == from {
+		if next != "" && nextCheckpointToken == "" {
 			// Warn (not Debug) so operators see the cut-off: when the walk ends
 			// on a repeated next token, any role members past that point are
 			// never emitted and their grants would be bucketed as deleted.
@@ -251,7 +263,7 @@ func (b *roleBuilder) Grants(
 				)
 			}
 		}
-		nextToken, err := bag.NextToken(client2.GetNextRoleUserCheckpointToken(from, next))
+		nextToken, err := bag.NextToken(nextCheckpointToken)
 		if err != nil {
 			return nil, "", nil, err
 		}
