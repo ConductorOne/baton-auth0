@@ -83,6 +83,20 @@ func TestRolesGrantsRepeatedNextTokenTerminates(t *testing.T) {
 	require.Equal(t, "", finalToken, "walk must terminate despite a repeated next token")
 	// Bag-init call makes no users call; page 1 + the repeated-next page = exactly 2.
 	require.Equal(t, 2, usersCalls)
+	// Only the second page (from == next == "cursor-A") is a repeated-next
+	// event, so exactly one occurrence was counted — and occurrence 1 is a
+	// sampled warn (see TestRepeatedCursorWarnSampling).
+	require.Equal(t, uint64(1), rb.repeatedCursorWarns.Load())
+}
+
+func TestRepeatedCursorWarnSampling(t *testing.T) {
+	// L7 logarithmic sampling: warn at occurrences 1, 10, 100, then every 1000.
+	for _, tc := range []struct {
+		total uint64
+		warn  bool
+	}{{1, true}, {2, false}, {9, false}, {10, true}, {11, false}, {100, true}, {999, false}, {1000, true}, {1999, false}, {2000, true}} {
+		require.Equal(t, tc.warn, repeatedCursorWarnSampled(tc.total), "occurrence %d", tc.total)
+	}
 }
 
 func TestRolesGrantsZeroPermissionsEmitsMembership(t *testing.T) {

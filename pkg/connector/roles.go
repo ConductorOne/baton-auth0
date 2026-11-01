@@ -3,6 +3,7 @@ package connector
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 
 	client2 "github.com/conductorone/baton-auth0/pkg/client"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
@@ -27,10 +28,22 @@ const rolePermissionEntitlementName = "has_permission"
 type roleBuilder struct {
 	client          *client2.Client
 	syncPermissions bool
+	// repeatedCursorWarns counts repeated-next-token events for the L7
+	// log sampler: the Warn fires only at occurrences 1, 10, 100, then
+	// every 1000 (with total_occurrences), so a tenant-wide checkpoint
+	// degradation logs once per sample window, not once per role.
+	repeatedCursorWarns atomic.Uint64
 }
 
 func (b *roleBuilder) ResourceType(_ context.Context) *v2.ResourceType {
 	return roleResourceType
+}
+
+// repeatedCursorWarnSampled reports whether occurrence n of the repeated-next
+// token event should emit a Warn under the L7 logarithmic sampler
+// (1, 10, 100, then every 1000).
+func repeatedCursorWarnSampled(total uint64) bool {
+	return total == 1 || total == 10 || total == 100 || total%1000 == 0
 }
 
 // Create a new connector resource for an Auth0 role.
@@ -225,11 +238,18 @@ func (b *roleBuilder) Grants(
 			// Warn (not Debug) so operators see the cut-off: when the walk ends
 			// on a repeated next token, any role members past that point are
 			// never emitted and their grants would be bucketed as deleted.
-			l.Warn(
-				"baton-auth0: role users checkpoint returned a repeated next token; treating as exhaustion",
-				zap.String("role_id", resource.Id.Resource),
-				zap.String("from", from),
-			)
+			// The condition is NOT tenant-bounded (one warn per affected role
+			// per sync), so ci-review L7 sampling applies: log at occurrences
+			// 1, 10, 100, then every 1000, labeling each Warn with the total.
+			total := b.repeatedCursorWarns.Add(1)
+			if repeatedCursorWarnSampled(total) {
+				l.Warn(
+					"baton-auth0: role users checkpoint returned a repeated next token; treating as exhaustion",
+					zap.Uint64("total_occurrences", total),
+					zap.String("role_id", resource.Id.Resource),
+					zap.String("from", from),
+				)
+			}
 		}
 		nextToken, err := bag.NextToken(client2.GetNextRoleUserCheckpointToken(from, next))
 		if err != nil {
