@@ -222,7 +222,10 @@ func (b *roleBuilder) Grants(
 
 		l := ctxzap.Extract(ctx)
 		if next != "" && next == from {
-			l.Debug(
+			// Warn (not Debug) so operators see the cut-off: when the walk ends
+			// on a repeated next token, any role members past that point are
+			// never emitted and their grants would be bucketed as deleted.
+			l.Warn(
 				"baton-auth0: role users checkpoint returned a repeated next token; treating as exhaustion",
 				zap.String("role_id", resource.Id.Resource),
 				zap.String("from", from),
