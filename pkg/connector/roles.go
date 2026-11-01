@@ -220,7 +220,15 @@ func (b *roleBuilder) Grants(
 			grants = append(grants, nextGrant)
 		}
 
-		nextToken, err := bag.NextToken(client2.GetNextRoleUserCheckpointToken(next))
+		l := ctxzap.Extract(ctx)
+		if next != "" && next == from {
+			l.Debug(
+				"baton-auth0: role users checkpoint returned a repeated next token; treating as exhaustion",
+				zap.String("role_id", resource.Id.Resource),
+				zap.String("from", from),
+			)
+		}
+		nextToken, err := bag.NextToken(client2.GetNextRoleUserCheckpointToken(from, next))
 		if err != nil {
 			return nil, "", nil, err
 		}
@@ -241,10 +249,10 @@ func (b *roleBuilder) Grants(
 		}
 		outputAnnotations.WithRateLimiting(rateLimitData)
 
-		if len(permissions) == 0 {
-			return nil, "", outputAnnotations, nil
-		}
-
+		// ci-review S1: a role with zero permissions must still fall through to the
+		// bag.Pop()/bag.Marshal() tail below so its user-membership state is
+		// processed; ending the listing here strands the user bag state and makes C1
+		// bucket those memberships as deleted.
 		var grants []*v2.Grant
 		for _, permission := range permissions {
 			// Same as formatScopeId function in scope.go

@@ -157,9 +157,15 @@ func ParseRoleUserCheckpointToken(token string) (string, error) {
 }
 
 // GetNextRoleUserCheckpointToken serializes the checkpoint token returned by
-// Auth0 into a pagination token string. Returns "" when next is empty (no more pages).
-func GetNextRoleUserCheckpointToken(next string) string {
-	if next == "" {
+// Auth0 into a pagination token string. Returns "" when next is empty (no
+// more pages) or when next equals the "from" checkpoint already carried: the
+// Auth0 GET /api/v2/roles/{id}/users checkpoint endpoint is documented to
+// signal exhaustion by the absence of next
+// (https://auth0.com/docs/api/management/v2/roles/get-role-user); a repeated
+// next is not a documented steady state and re-emitting it would hand the SDK
+// an unchanged page token, which it rejects as a connector bug (BUGBOT §2).
+func GetNextRoleUserCheckpointToken(from, next string) string {
+	if next == "" || next == from {
 		return ""
 	}
 	bytes, err := json.Marshal(RoleUserCheckpointPagination{From: next})
