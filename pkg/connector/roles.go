@@ -202,10 +202,10 @@ func (b *roleBuilder) Grants(
 		}
 		outputAnnotations.WithRateLimiting(rateLimitData)
 
-		if len(users) == 0 {
-			return nil, "", outputAnnotations, nil
-		}
-
+		// No empty-page early return: exhaustion is signaled by the ABSENCE of
+		// next, not by an empty page (BUGBOT §2). If a page comes back empty
+		// but carries a next checkpoint, the tail below keeps walking instead
+		// of returning "" and bucketing later-page memberships as deleted.
 		var grants []*v2.Grant
 		for _, user := range users {
 			principalId, err := resourceSdk.NewResourceID(userResourceType, user.UserId)
