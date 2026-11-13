@@ -3,6 +3,7 @@ package connector
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 
 	client2 "github.com/conductorone/baton-auth0/pkg/client"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
@@ -27,10 +28,28 @@ const rolePermissionEntitlementName = "has_permission"
 type roleBuilder struct {
 	client          *client2.Client
 	syncPermissions bool
+	// repeatedCursorWarns counts repeated-next-token events for the L7
+	// log sampler: the Warn fires only at occurrences 1, 10, 100, then
+	// every 1000 (with total_occurrences), so a tenant-wide checkpoint
+	// degradation logs once per sample window, not once per role.
+	// The counter is PER-PROCESS: in Lambda mode each page is a separate
+	// invocation, so it does not accumulate across pages and each affected
+	// role logs one occurrence-1 Warn. Volume bounding is therefore
+	// best-effort by process lifetime.
+	repeatedCursorWarns atomic.Uint64
 }
 
 func (b *roleBuilder) ResourceType(_ context.Context) *v2.ResourceType {
 	return roleResourceType
+}
+
+// repeatedCursorWarnSampled reports whether occurrence n of the repeated-next
+// token event should emit a Warn under the L7 logarithmic sampler
+// (1, 10, 100, then every 1000). The counter is per-process (see the
+// repeatedCursorWarns field): in Lambda mode pages run as separate
+// invocations, so decay applies only within one process lifetime.
+func repeatedCursorWarnSampled(total uint64) bool {
+	return total == 1 || total == 10 || total == 100 || total%1000 == 0
 }
 
 // Create a new connector resource for an Auth0 role.
@@ -202,10 +221,10 @@ func (b *roleBuilder) Grants(
 		}
 		outputAnnotations.WithRateLimiting(rateLimitData)
 
-		if len(users) == 0 {
-			return nil, "", outputAnnotations, nil
-		}
-
+		// No empty-page early return: exhaustion is signaled by the ABSENCE of
+		// next, not by an empty page (BUGBOT §2). If a page comes back empty
+		// but carries a next checkpoint, the tail below keeps walking instead
+		// of returning "" and bucketing later-page memberships as deleted.
 		var grants []*v2.Grant
 		for _, user := range users {
 			principalId, err := resourceSdk.NewResourceID(userResourceType, user.UserId)
@@ -220,7 +239,31 @@ func (b *roleBuilder) Grants(
 			grants = append(grants, nextGrant)
 		}
 
-		nextToken, err := bag.NextToken(client2.GetNextRoleUserCheckpointToken(next))
+		// Derive the repeated-cursor condition from the helper's RETURN instead
+		// of re-deriving it by hand: GetNextRoleUserCheckpointToken returns ""
+		// iff next is empty or repeats from, so a non-empty next whose token
+		// came back empty is exactly the repeated-cursor case. If the helper
+		// ever learns a new exhaustion condition, this branch follows it.
+		nextCheckpointToken := client2.GetNextRoleUserCheckpointToken(from, next)
+		l := ctxzap.Extract(ctx)
+		if next != "" && nextCheckpointToken == "" {
+			// Warn (not Debug) so operators see the cut-off: when the walk ends
+			// on a repeated next token, any role members past that point are
+			// never emitted and their grants would be bucketed as deleted.
+			// The condition is NOT tenant-bounded (one warn per affected role
+			// per sync), so ci-review L7 sampling applies: log at occurrences
+			// 1, 10, 100, then every 1000, labeling each Warn with the total.
+			total := b.repeatedCursorWarns.Add(1)
+			if repeatedCursorWarnSampled(total) {
+				l.Warn(
+					"baton-auth0: role users checkpoint returned a repeated next token; treating as exhaustion",
+					zap.Uint64("total_occurrences", total),
+					zap.String("role_id", resource.Id.Resource),
+					zap.String("from", from),
+				)
+			}
+		}
+		nextToken, err := bag.NextToken(nextCheckpointToken)
 		if err != nil {
 			return nil, "", nil, err
 		}
@@ -241,10 +284,10 @@ func (b *roleBuilder) Grants(
 		}
 		outputAnnotations.WithRateLimiting(rateLimitData)
 
-		if len(permissions) == 0 {
-			return nil, "", outputAnnotations, nil
-		}
-
+		// ci-review S1: a role with zero permissions must still fall through to the
+		// bag.Pop()/bag.Marshal() tail below so its user-membership state is
+		// processed; ending the listing here strands the user bag state and makes C1
+		// bucket those memberships as deleted.
 		var grants []*v2.Grant
 		for _, permission := range permissions {
 			// Same as formatScopeId function in scope.go
