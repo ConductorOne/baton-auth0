@@ -1,4 +1,4 @@
-![Baton Logo](./docs/images/baton-logo.png)
+![Baton Logo](./baton-logo.png)
 
 # `baton-auth0` [![Go Reference](https://pkg.go.dev/badge/github.com/conductorone/baton-auth0.svg)](https://pkg.go.dev/github.com/conductorone/baton-auth0) ![verify](https://github.com/conductorone/baton-auth0/actions/workflows/verify.yaml/badge.svg)
 
