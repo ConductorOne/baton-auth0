@@ -241,10 +241,6 @@ func (b *roleBuilder) Grants(
 		}
 		outputAnnotations.WithRateLimiting(rateLimitData)
 
-		if len(permissions) == 0 {
-			return nil, "", outputAnnotations, nil
-		}
-
 		var grants []*v2.Grant
 		for _, permission := range permissions {
 			// Same as formatScopeId function in scope.go
